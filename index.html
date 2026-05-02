@@ -1,0 +1,87 @@
+<!--
+Snake Demo - A Snake game with togglable features to demonstrate game design
+Written in 2026 by Philipp Hagenlocher <me@philipphagenlocher.de>
+Portions of this software were written with the assistance of AI.
+
+To the extent possible under law, the author(s) have dedicated all copyright and related and neighboring rights to this software to the public domain worldwide. This software is distributed without any warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication along with this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Snake</title>
+<link rel="stylesheet" href="snake.css">
+</head>
+<body>
+<div id="root">
+  <div id="game-container"></div>
+<hr>
+<details id="features-details">
+  <summary>Game Features</summary>
+  <div id="toggles">
+    <label title="Golden diamond worth 100pts, appears every 15s and moves randomly"><input type="checkbox" id="toggle-bonus-food" checked> Bonus Food</label>
+    <label title="1-second warning before game over, lets you dodge with a safe arrow key"><input type="checkbox" id="toggle-grace-period" checked> Grace Period</label>
+    <label title="Snake shrinks by half when eating bonus food"><input type="checkbox" id="toggle-shrink" checked> Shrink on Bonus Food</label>
+    <label title="Game accelerates as you eat food, from 135ms down to 50ms"><input type="checkbox" id="toggle-speed-up" checked> Speed Up</label>
+    <label title="Decaying bonus multiplier added to score when eating food"><input type="checkbox" id="toggle-score-bonus" checked> Score Bonus</label>
+    <label title="Snake teleports to opposite edge instead of dying at walls"><input type="checkbox" id="toggle-wrap" checked> Wrap Around</label>
+    <label title="Press the same direction key to temporarily move ~35% faster"><input type="checkbox" id="toggle-speed-boost" checked> Speed Boost</label>
+    <label title="Queues rapid direction inputs so they aren't lost between ticks"><input type="checkbox" id="toggle-input-buffer" checked> Input Buffer</label>
+    <label title="Bonus food spawns every 15 seconds instead of every 5 foods eaten"><input type="checkbox" id="toggle-timed-bonus" checked> Timed Bonus Food</label>
+    <label title="Static walls form a hollow square with openings in the center of each side"><input type="checkbox" id="toggle-walls" checked> Static Walls</label>
+  </div>
+</details>
+</div>
+
+<script src="snake.js"></script>
+<script>
+const gameContainer = document.getElementById('game-container');
+const toggleBonusFood = document.getElementById('toggle-bonus-food');
+const toggleGracePeriod = document.getElementById('toggle-grace-period');
+const toggleShrink = document.getElementById('toggle-shrink');
+const toggleSpeedUp = document.getElementById('toggle-speed-up');
+const toggleScoreBonus = document.getElementById('toggle-score-bonus');
+const toggleWrap = document.getElementById('toggle-wrap');
+const toggleSpeedBoost = document.getElementById('toggle-speed-boost');
+const toggleInputBuffer = document.getElementById('toggle-input-buffer');
+const toggleTimedBonus = document.getElementById('toggle-timed-bonus');
+const toggleWalls = document.getElementById('toggle-walls');
+
+let game = null;
+
+function mountGame() {
+  if (game) {
+    game.destroy();
+  }
+  game = new SnakeGame(gameContainer, {
+    enableBonusFood: toggleBonusFood.checked,
+    enableGracePeriod: toggleGracePeriod.checked,
+    enableShrinkOnBonusFood: toggleShrink.checked,
+    enableSpeedUp: toggleSpeedUp.checked,
+    enableScoreBonus: toggleScoreBonus.checked,
+    enableWrap: toggleWrap.checked,
+    enableSpeedBoost: toggleSpeedBoost.checked,
+    enableInputBuffer: toggleInputBuffer.checked,
+    enableTimedBonusFood: toggleTimedBonus.checked,
+    enableWalls: toggleWalls.checked,
+  });
+}
+
+toggleBonusFood.addEventListener('change', mountGame);
+toggleGracePeriod.addEventListener('change', mountGame);
+toggleShrink.addEventListener('change', mountGame);
+toggleSpeedUp.addEventListener('change', mountGame);
+toggleScoreBonus.addEventListener('change', mountGame);
+toggleWrap.addEventListener('change', mountGame);
+toggleSpeedBoost.addEventListener('change', mountGame);
+toggleInputBuffer.addEventListener('change', mountGame);
+toggleTimedBonus.addEventListener('change', mountGame);
+toggleWalls.addEventListener('change', mountGame);
+
+mountGame();
+</script>
+</body>
+</html>
