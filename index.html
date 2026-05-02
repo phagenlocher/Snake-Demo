@@ -96,10 +96,6 @@ function saveSettings() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
 }
 
-function updateDisabledFeatures(mode) {
-  // reserved for future feature-disabled logic
-}
-
 function loadSettings() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -138,7 +134,6 @@ function mountGame() {
     enableTimedBonusFood: toggleTimedBonus.checked,
     enableWalls: toggleWalls.checked,
   });
-  updateDisabledFeatures(modeSelect.value);
   saveSettings();
 }
 
