@@ -228,12 +228,17 @@ class SnakeGame {
     const dirs = [{ x: 0, y: -1 }, { x: 0, y: 1 }, { x: -1, y: 0 }, { x: 1, y: 0 }];
     const dir = dirs[Math.floor(Math.random() * dirs.length)];
     let next = { x: this.bonusFood.x + dir.x, y: this.bonusFood.y + dir.y };
+    const obstacleFree = () =>
+      !this.snake.some(s => s.x === next.x && s.y === next.y) &&
+      !(this.options.enableWalls && WALLS.some(w => w.x === next.x && w.y === next.y));
     if (this.options.enableWrap) {
       next.x = (next.x + this.COLS) % this.COLS;
       next.y = (next.y + this.ROWS) % this.ROWS;
-    }
-    if (next.x >= 0 && next.x < this.COLS && next.y >= 0 && next.y < this.ROWS && !this.snake.some(s => s.x === next.x && s.y === next.y) && !(this.options.enableWalls && WALLS.some(w => w.x === next.x && w.y === next.y))) {
-      this.bonusFood = next;
+      if (obstacleFree()) this.bonusFood = next;
+    } else {
+      if (next.x >= 0 && next.x < this.COLS && next.y >= 0 && next.y < this.ROWS && obstacleFree()) {
+        this.bonusFood = next;
+      }
     }
     if (this.options.mode === MODE_CONSTRICTOR && this.bonusFood && this._isFoodEnclosed(this.bonusFood)) {
       this._eatBonusFood();
