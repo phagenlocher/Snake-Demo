@@ -46,6 +46,8 @@ You should have received a copy of the CC0 Public Domain Dedication along with t
 
 <script src="snake.js"></script>
 <script>
+const STORAGE_KEY = 'snake-game-settings';
+
 const gameContainer = document.querySelector('.snake-game-container');
 const modeSelect = document.querySelector('.snake-mode-select');
 const toggleBonusFood = document.querySelector('.snake-toggle-bonus-food');
@@ -60,6 +62,44 @@ const toggleTimedBonus = document.querySelector('.snake-toggle-timed-bonus');
 const toggleWalls = document.querySelector('.snake-toggle-walls');
 
 let game = null;
+
+function saveSettings() {
+  const settings = {
+    mode: modeSelect.value,
+    enableBonusFood: toggleBonusFood.checked,
+    enableGracePeriod: toggleGracePeriod.checked,
+    enableShrinkOnBonusFood: toggleShrink.checked,
+    enableSpeedUp: toggleSpeedUp.checked,
+    enableScoreBonus: toggleScoreBonus.checked,
+    enableWrap: toggleWrap.checked,
+    enableSpeedBoost: toggleSpeedBoost.checked,
+    enableInputBuffer: toggleInputBuffer.checked,
+    enableTimedBonusFood: toggleTimedBonus.checked,
+    enableWalls: toggleWalls.checked,
+  };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+}
+
+function loadSettings() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const s = JSON.parse(raw);
+    if (s.mode) modeSelect.value = s.mode;
+    if (typeof s.enableBonusFood === 'boolean') toggleBonusFood.checked = s.enableBonusFood;
+    if (typeof s.enableGracePeriod === 'boolean') toggleGracePeriod.checked = s.enableGracePeriod;
+    if (typeof s.enableShrinkOnBonusFood === 'boolean') toggleShrink.checked = s.enableShrinkOnBonusFood;
+    if (typeof s.enableSpeedUp === 'boolean') toggleSpeedUp.checked = s.enableSpeedUp;
+    if (typeof s.enableScoreBonus === 'boolean') toggleScoreBonus.checked = s.enableScoreBonus;
+    if (typeof s.enableWrap === 'boolean') toggleWrap.checked = s.enableWrap;
+    if (typeof s.enableSpeedBoost === 'boolean') toggleSpeedBoost.checked = s.enableSpeedBoost;
+    if (typeof s.enableInputBuffer === 'boolean') toggleInputBuffer.checked = s.enableInputBuffer;
+    if (typeof s.enableTimedBonusFood === 'boolean') toggleTimedBonus.checked = s.enableTimedBonusFood;
+    if (typeof s.enableWalls === 'boolean') toggleWalls.checked = s.enableWalls;
+  } catch (_) {
+    // corrupted or missing → use HTML defaults
+  }
+}
 
 function mountGame() {
   if (game) {
@@ -78,6 +118,7 @@ function mountGame() {
     enableTimedBonusFood: toggleTimedBonus.checked,
     enableWalls: toggleWalls.checked,
   });
+  saveSettings();
 }
 
 modeSelect.addEventListener('change', mountGame);
@@ -92,6 +133,7 @@ toggleInputBuffer.addEventListener('change', mountGame);
 toggleTimedBonus.addEventListener('change', mountGame);
 toggleWalls.addEventListener('change', mountGame);
 
+loadSettings();
 mountGame();
 </script>
 </body>
