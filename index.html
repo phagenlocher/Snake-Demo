@@ -16,47 +16,48 @@ You should have received a copy of the CC0 Public Domain Dedication along with t
 <link rel="stylesheet" href="snake.css">
 </head>
 <body>
-<div id="root">
-  <div id="game-container"></div>
-  <div id="mode-selector">
-    <label for="mode-select">Mode:</label>
-    <select id="mode-select">
-      <option value="classic">Classic</option>
-      <option value="timeTrial">Time Trial</option>
-    </select>
+<div class="snake-root">
+  <div class="snake-game-container"></div>
+  <div class="snake-mode-selector">
+    <label>Mode:
+      <select class="snake-mode-select">
+        <option value="classic">Classic</option>
+        <option value="timeTrial">Time Trial</option>
+      </select>
+    </label>
   </div>
 <hr>
-<details id="features-details">
+<details class="snake-features-details">
   <summary>Game Features</summary>
-  <div id="toggles">
-    <label title="Golden diamond worth 100pts, appears every 15s and moves randomly"><input type="checkbox" id="toggle-bonus-food" checked> Bonus Food</label>
-    <label title="1-second warning before game over, lets you dodge with a safe arrow key"><input type="checkbox" id="toggle-grace-period" checked> Grace Period</label>
-    <label title="Snake shrinks by half when eating bonus food"><input type="checkbox" id="toggle-shrink" checked> Shrink on Bonus Food</label>
-    <label title="Game accelerates as you eat food, from 135ms down to 50ms"><input type="checkbox" id="toggle-speed-up" checked> Speed Up</label>
-    <label title="Decaying bonus multiplier added to score when eating food"><input type="checkbox" id="toggle-score-bonus" checked> Score Bonus</label>
-    <label title="Snake teleports to opposite edge instead of dying at walls"><input type="checkbox" id="toggle-wrap" checked> Wrap Around</label>
-    <label title="Press the same direction key to temporarily move ~35% faster"><input type="checkbox" id="toggle-speed-boost" checked> Speed Boost</label>
-    <label title="Queues rapid direction inputs so they aren't lost between ticks"><input type="checkbox" id="toggle-input-buffer" checked> Input Buffer</label>
-    <label title="Bonus food spawns every 15 seconds instead of every 5 foods eaten"><input type="checkbox" id="toggle-timed-bonus" checked> Timed Bonus Food</label>
-    <label title="Static walls form a hollow square with openings in the center of each side"><input type="checkbox" id="toggle-walls" checked> Static Walls</label>
+  <div class="snake-toggles">
+    <label title="Golden diamond worth 100pts, appears every 15s and moves randomly"><input type="checkbox" class="snake-toggle-bonus-food" checked> Bonus Food</label>
+    <label title="1-second warning before game over, lets you dodge with a safe arrow key"><input type="checkbox" class="snake-toggle-grace-period" checked> Grace Period</label>
+    <label title="Snake shrinks by half when eating bonus food"><input type="checkbox" class="snake-toggle-shrink" checked> Shrink on Bonus Food</label>
+    <label title="Game accelerates as you eat food, from 135ms down to 50ms"><input type="checkbox" class="snake-toggle-speed-up" checked> Speed Up</label>
+    <label title="Decaying bonus multiplier added to score when eating food"><input type="checkbox" class="snake-toggle-score-bonus" checked> Score Bonus</label>
+    <label title="Snake teleports to opposite edge instead of dying at walls"><input type="checkbox" class="snake-toggle-wrap" checked> Wrap Around</label>
+    <label title="Press the same direction key to temporarily move ~35% faster"><input type="checkbox" class="snake-toggle-speed-boost" checked> Speed Boost</label>
+    <label title="Queues rapid direction inputs so they aren't lost between ticks"><input type="checkbox" class="snake-toggle-input-buffer" checked> Input Buffer</label>
+    <label title="Bonus food spawns every 15 seconds instead of every 5 foods eaten"><input type="checkbox" class="snake-toggle-timed-bonus" checked> Timed Bonus Food</label>
+    <label title="Static walls form a hollow square with openings in the center of each side"><input type="checkbox" class="snake-toggle-walls" checked> Static Walls</label>
   </div>
 </details>
 </div>
 
 <script src="snake.js"></script>
 <script>
-const gameContainer = document.getElementById('game-container');
-const modeSelect = document.getElementById('mode-select');
-const toggleBonusFood = document.getElementById('toggle-bonus-food');
-const toggleGracePeriod = document.getElementById('toggle-grace-period');
-const toggleShrink = document.getElementById('toggle-shrink');
-const toggleSpeedUp = document.getElementById('toggle-speed-up');
-const toggleScoreBonus = document.getElementById('toggle-score-bonus');
-const toggleWrap = document.getElementById('toggle-wrap');
-const toggleSpeedBoost = document.getElementById('toggle-speed-boost');
-const toggleInputBuffer = document.getElementById('toggle-input-buffer');
-const toggleTimedBonus = document.getElementById('toggle-timed-bonus');
-const toggleWalls = document.getElementById('toggle-walls');
+const gameContainer = document.querySelector('.snake-game-container');
+const modeSelect = document.querySelector('.snake-mode-select');
+const toggleBonusFood = document.querySelector('.snake-toggle-bonus-food');
+const toggleGracePeriod = document.querySelector('.snake-toggle-grace-period');
+const toggleShrink = document.querySelector('.snake-toggle-shrink');
+const toggleSpeedUp = document.querySelector('.snake-toggle-speed-up');
+const toggleScoreBonus = document.querySelector('.snake-toggle-score-bonus');
+const toggleWrap = document.querySelector('.snake-toggle-wrap');
+const toggleSpeedBoost = document.querySelector('.snake-toggle-speed-boost');
+const toggleInputBuffer = document.querySelector('.snake-toggle-input-buffer');
+const toggleTimedBonus = document.querySelector('.snake-toggle-timed-bonus');
+const toggleWalls = document.querySelector('.snake-toggle-walls');
 
 let game = null;
 

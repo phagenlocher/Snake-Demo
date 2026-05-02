@@ -48,24 +48,24 @@ class SnakeGame {
 
   _buildDOM() {
     this.container.innerHTML = `
-      <div id="container">
-        <div id="hud">
-          <span class="score">Score: 0</span>
-          <span class="bonus">Bonus: 0</span>
-          <span class="timer">Time: 0:00</span>
+      <div class="snake-container">
+        <div class="snake-hud">
+          <span class="snake-score">Score: 0</span>
+          <span class="snake-bonus">Bonus: 0</span>
+          <span class="snake-timer">Time: 0:00</span>
         </div>
-        <div class="game-wrapper"><canvas class="game-canvas" width="400" height="400" tabindex="0"></canvas><div class="focus-overlay">Click to focus</div></div>
-        <div class="message">Press any arrow key to start</div>
+        <div class="snake-game-wrapper"><canvas class="snake-canvas" width="400" height="400" tabindex="0"></canvas><div class="snake-focus-overlay">Click to focus</div></div>
+        <div class="snake-message">Press any arrow key to start</div>
       </div>
     `;
 
-    this.canvas = this.container.querySelector('.game-canvas');
+    this.canvas = this.container.querySelector('.snake-canvas');
     this.ctx = this.canvas.getContext('2d');
-    this.scoreEl = this.container.querySelector('.score');
-    this.timerEl = this.container.querySelector('.timer');
-    this.bonusEl = this.container.querySelector('.bonus');
-    this.messageEl = this.container.querySelector('.message');
-    this.overlay = this.container.querySelector('.focus-overlay');
+    this.scoreEl = this.container.querySelector('.snake-score');
+    this.timerEl = this.container.querySelector('.snake-timer');
+    this.bonusEl = this.container.querySelector('.snake-bonus');
+    this.messageEl = this.container.querySelector('.snake-message');
+    this.overlay = this.container.querySelector('.snake-focus-overlay');
     this.COLS = this.canvas.width / this.GRID;
     this.ROWS = this.canvas.height / this.GRID;
   }
@@ -73,11 +73,11 @@ class SnakeGame {
   _bindEvents() {
     this._onKeydown = this._handleKeydown.bind(this);
     this._onFocus = () => {
-      this.overlay.classList.add('hidden');
+      this.overlay.classList.add('snake-hidden');
       this._resumeGame();
     };
     this._onBlur = () => {
-      this.overlay.classList.remove('hidden');
+      this.overlay.classList.remove('snake-hidden');
       this._pauseGame();
     };
     this._onClick = () => this.canvas.focus();

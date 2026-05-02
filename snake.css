@@ -17,11 +17,11 @@ body {
   font-family: 'Courier New', monospace;
   color: #4a7a4a;
 }
-#container {
+.snake-container {
   text-align: center;
   width: 408px;
 }
-#hud {
+.snake-hud {
   display: flex;
   justify-content: space-between;
   padding: 8px 4px;
@@ -29,20 +29,20 @@ body {
   font-weight: bold;
   letter-spacing: 1px;
 }
-#hud .bonus {
+.snake-hud .snake-bonus {
   color: #FFD700;
 }
-canvas {
+.snake-canvas {
   display: block;
   background: #0d1a0d;
   outline: none;
 }
-.game-wrapper {
+.snake-game-wrapper {
   position: relative;
   display: inline-block;
   border: 4px solid #4a7a4a;
 }
-.focus-overlay {
+.snake-focus-overlay {
   position: absolute;
   inset: 0;
   background: rgba(0, 0, 0, 0.55);
@@ -55,15 +55,15 @@ canvas {
   font-size: 18px;
   letter-spacing: 1px;
 }
-.focus-overlay.hidden {
+.snake-focus-overlay.snake-hidden {
   display: none;
 }
-.message {
+.snake-message {
   margin-top: 16px;
   font-size: 16px;
   height: 24px;
 }
-#toggles {
+.snake-toggles {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px 24px;
@@ -73,28 +73,28 @@ canvas {
   width: 408px;
   padding-top: 8px;
 }
-#toggles label {
+.snake-toggles label {
   display: flex;
   align-items: center;
   gap: 6px;
   cursor: pointer;
 }
-#toggles input[type="checkbox"] {
+.snake-toggles input[type="checkbox"] {
   accent-color: #4a7a4a;
   width: 16px;
   height: 16px;
   cursor: pointer;
 }
-hr + #features-details {
+hr + .snake-features-details {
   margin-top: 0;
 }
-#root > hr {
+.snake-root > hr {
   border: none;
   border-top: 1px solid #4a7a4a;
   margin: 12px 0;
   width: 408px;
 }
-#mode-selector {
+.snake-mode-selector {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -103,10 +103,10 @@ hr + #features-details {
   letter-spacing: 1px;
   padding: 8px 0;
 }
-#mode-selector label {
+.snake-mode-selector label {
   color: #4a7a4a;
 }
-#mode-select {
+.snake-mode-select {
   background: #1a1a1a;
   color: #4a7a4a;
   border: 1px solid #4a7a4a;
