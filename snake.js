@@ -321,6 +321,18 @@ class SnakeGame {
     return false;
   }
 
+  _isDirSafe(dir) {
+    const nextHead = { x: this.snake[0].x + dir.x, y: this.snake[0].y + dir.y };
+    if (this.options.enableWrap) {
+      nextHead.x = (nextHead.x + this.COLS) % this.COLS;
+      nextHead.y = (nextHead.y + this.ROWS) % this.ROWS;
+    }
+    const hitsWall = this.options.enableWalls && WALLS.some(w => w.x === nextHead.x && w.y === nextHead.y);
+    const hitsBoundary = nextHead.x < 0 || nextHead.x >= this.COLS || nextHead.y < 0 || nextHead.y >= this.ROWS;
+    const hitsSelf = this.snake.some(s => s.x === nextHead.x && s.y === nextHead.y);
+    return !hitsWall && !hitsBoundary && !hitsSelf;
+  }
+
   _eatRegularFood() {
     let points = 10;
     if (this.options.enableScoreBonus) {
@@ -457,8 +469,10 @@ class SnakeGame {
       while (this.inputBuffer.length > 0) {
         const next = this.inputBuffer.shift();
         if (next.x !== -effectiveDir.x || next.y !== -effectiveDir.y) {
-          effectiveDir = next;
-          break;
+          if (this._isDirSafe(next)) {
+            effectiveDir = next;
+            break;
+          }
         }
       }
 
