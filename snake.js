@@ -641,6 +641,11 @@ class SnakeGame {
       return;
     }
 
+    const tag = e.target.tagName;
+    if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || tag === 'BUTTON' || e.target.isContentEditable) {
+      return;
+    }
+
     const keyMap = {
       ArrowUp:    { x:  0, y: -1 },
       ArrowDown:  { x:  0, y:  1 },
