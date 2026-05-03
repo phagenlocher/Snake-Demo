@@ -155,14 +155,14 @@ class SnakeGame {
     };
     this._onClick = () => this.canvas.focus();
 
-    document.addEventListener('keydown', this._onKeydown);
+    this.canvas.addEventListener('keydown', this._onKeydown);
     this.canvas.addEventListener('focus', this._onFocus);
     this.canvas.addEventListener('blur', this._onBlur);
     this.overlay.addEventListener('click', this._onClick);
   }
 
   destroy() {
-    document.removeEventListener('keydown', this._onKeydown);
+    this.canvas.removeEventListener('keydown', this._onKeydown);
     this.canvas.removeEventListener('focus', this._onFocus);
     this.canvas.removeEventListener('blur', this._onBlur);
     this.overlay.removeEventListener('click', this._onClick);
