@@ -64,13 +64,6 @@ const COLOR_BG = '#0d1a0d';
 const COLOR_WALL_BODY = '#555';
 const COLOR_WALL_EDGE_LIGHT = '#777';
 const COLOR_WALL_EDGE_DARK = '#333';
-const COLOR_SNAKE_WARNING = '#ff6666';
-const COLOR_SNAKE_IGNORED = '#c084fc';
-const COLOR_SNAKE_NORMAL = '#4a7a4a';
-const COLOR_SNAKE_HEAD_IGNORED = '#e2ccff';
-const COLOR_SNAKE_HEAD_WARNING = '#ffaaaa';
-const COLOR_SNAKE_HEAD_NORMAL = '#8ad88a';
-const COLOR_SNAKE_HEAD_BOOST = '#f0e68c';
 const COLOR_FOOD = '#7aff7a';
 const COLOR_FOOD_BONUS = '#ffd700';
 const COLOR_WORMHOLE_ENTRY = '#003a00';
@@ -87,6 +80,214 @@ const WARNING_TIMEOUT_MS = 700;
 const BONUS_FOOD_LIFETIME_MS = 5000;
 const BONUS_FOOD_SPAWN_INTERVAL_MS = 15000;
 const SCORE_BONUS_DECAY_INTERVAL_MS = 200;
+
+// Bitmap helpers
+function dirBetween(a, b, enableWrap) {
+  const d = { x: b.x - a.x, y: b.y - a.y };
+  if (enableWrap) {
+    if (Math.abs(d.x) > 1) d.x = -Math.sign(d.x);
+    if (Math.abs(d.y) > 1) d.y = -Math.sign(d.y);
+  }
+  return d;
+}
+
+const DIR_KEY = {
+  '0,-1': 'Up',
+  '0,1': 'Down',
+  '-1,0': 'Left',
+  '1,0': 'Right',
+};
+
+const CORNER_MAP = {
+  '1,0->0,1': 'cornerLD',
+  '0,-1->1,0': 'cornerRD',
+  '-1,0->0,1': 'cornerRD',
+  '0,-1->-1,0': 'cornerLD',
+  '1,0->0,-1': 'cornerLU',
+  '0,1->1,0': 'cornerRU',
+  '-1,0->0,-1': 'cornerRU',
+  '0,1->-1,0': 'cornerLU',
+};
+
+// Bitmap palettes { body, head, eye, letter }
+const PALETTE_NORMAL = { body: '#4a7a4a', head: '#8ad88a', eye: '#0d1a0d', letter: '#fff' };
+const PALETTE_WARNING = { body: '#ff6666', head: '#ffaaaa', eye: '#4a0000', letter: '#fff' };
+const PALETTE_IGNORED = { body: '#c084fc', head: '#e2ccff', eye: '#4a0060', letter: '#fff' };
+const PALETTE_BOOST = { body: '#4a7a4a', head: '#f0e68c', eye: '#0d1a0d', letter: '#000' };
+
+// Bitmap drawing functions — each receives (ctx, palette) on a 25×25 canvas
+const BITMAP_DRAWERS = {
+  headUp(ctx, p) {
+    ctx.fillStyle = p.body;
+    ctx.fillRect(0, 0, 25, 25);
+    ctx.fillStyle = p.head;
+    ctx.fillRect(2, 2, 21, 21);
+    ctx.fillStyle = p.eye;
+    ctx.fillRect(5, 3, 5, 4);
+    ctx.fillRect(15, 3, 5, 4);
+    ctx.fillStyle = p.letter;
+    ctx.font = 'bold 10px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('U', 12.5, 16);
+  },
+  headDown(ctx, p) {
+    ctx.fillStyle = p.body;
+    ctx.fillRect(0, 0, 25, 25);
+    ctx.fillStyle = p.head;
+    ctx.fillRect(2, 2, 21, 21);
+    ctx.fillStyle = p.eye;
+    ctx.fillRect(5, 18, 5, 4);
+    ctx.fillRect(15, 18, 5, 4);
+    ctx.fillStyle = p.letter;
+    ctx.font = 'bold 10px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('D', 12.5, 10);
+  },
+  headLeft(ctx, p) {
+    ctx.fillStyle = p.body;
+    ctx.fillRect(0, 0, 25, 25);
+    ctx.fillStyle = p.head;
+    ctx.fillRect(2, 2, 21, 21);
+    ctx.fillStyle = p.eye;
+    ctx.fillRect(3, 5, 4, 5);
+    ctx.fillRect(3, 15, 4, 5);
+    ctx.fillStyle = p.letter;
+    ctx.font = 'bold 10px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('L', 16, 12.5);
+  },
+  headRight(ctx, p) {
+    ctx.fillStyle = p.body;
+    ctx.fillRect(0, 0, 25, 25);
+    ctx.fillStyle = p.head;
+    ctx.fillRect(2, 2, 21, 21);
+    ctx.fillStyle = p.eye;
+    ctx.fillRect(18, 5, 4, 5);
+    ctx.fillRect(18, 15, 4, 5);
+    ctx.fillStyle = p.letter;
+    ctx.font = 'bold 10px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('R', 9, 12.5);
+  },
+  bodyHoriz(ctx, p) {
+    ctx.fillStyle = p.body;
+    ctx.fillRect(0, 0, 25, 25);
+    ctx.fillStyle = p.letter;
+    ctx.font = 'bold 10px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('H', 12.5, 12.5);
+  },
+  bodyVert(ctx, p) {
+    ctx.fillStyle = p.body;
+    ctx.fillRect(0, 0, 25, 25);
+    ctx.fillStyle = p.letter;
+    ctx.font = 'bold 10px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('V', 12.5, 12.5);
+  },
+  tailUp(ctx, p) {
+    ctx.fillStyle = p.body;
+    ctx.fillRect(0, 0, 25, 25);
+    ctx.clearRect(1, 0, 23, 8);
+    ctx.fillStyle = p.body;
+    ctx.fillRect(6, 5, 13, 3);
+    ctx.fillRect(9, 3, 7, 2);
+    ctx.fillRect(11, 2, 3, 1);
+    ctx.fillStyle = p.letter;
+    ctx.font = 'bold 10px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('u', 12.5, 18);
+  },
+  tailDown(ctx, p) {
+    ctx.fillStyle = p.body;
+    ctx.fillRect(0, 0, 25, 25);
+    ctx.clearRect(1, 17, 23, 8);
+    ctx.fillStyle = p.body;
+    ctx.fillRect(6, 17, 13, 3);
+    ctx.fillRect(9, 20, 7, 2);
+    ctx.fillRect(11, 22, 3, 1);
+    ctx.fillStyle = p.letter;
+    ctx.font = 'bold 10px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('d', 12.5, 8);
+  },
+  tailLeft(ctx, p) {
+    ctx.fillStyle = p.body;
+    ctx.fillRect(0, 0, 25, 25);
+    ctx.clearRect(0, 1, 8, 23);
+    ctx.fillStyle = p.body;
+    ctx.fillRect(5, 6, 3, 13);
+    ctx.fillRect(3, 9, 2, 7);
+    ctx.fillRect(2, 11, 1, 3);
+    ctx.fillStyle = p.letter;
+    ctx.font = 'bold 10px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('l', 17, 12.5);
+  },
+  tailRight(ctx, p) {
+    ctx.fillStyle = p.body;
+    ctx.fillRect(0, 0, 25, 25);
+    ctx.clearRect(17, 1, 8, 23);
+    ctx.fillStyle = p.body;
+    ctx.fillRect(17, 6, 3, 13);
+    ctx.fillRect(20, 9, 2, 7);
+    ctx.fillRect(22, 11, 1, 3);
+    ctx.fillStyle = p.letter;
+    ctx.font = 'bold 10px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('r', 8, 12.5);
+  },
+  cornerLD(ctx, p) {
+    ctx.fillStyle = p.body;
+    ctx.fillRect(0, 0, 25, 25);
+    ctx.clearRect(12, 0, 13, 13);
+    ctx.fillStyle = p.letter;
+    ctx.font = 'bold 10px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('7', 8, 18);
+  },
+  cornerRD(ctx, p) {
+    ctx.fillStyle = p.body;
+    ctx.fillRect(0, 0, 25, 25);
+    ctx.clearRect(0, 0, 13, 13);
+    ctx.fillStyle = p.letter;
+    ctx.font = 'bold 10px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('8', 17, 18);
+  },
+  cornerLU(ctx, p) {
+    ctx.fillStyle = p.body;
+    ctx.fillRect(0, 0, 25, 25);
+    ctx.clearRect(12, 12, 13, 13);
+    ctx.fillStyle = p.letter;
+    ctx.font = 'bold 10px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('9', 8, 8);
+  },
+  cornerRU(ctx, p) {
+    ctx.fillStyle = p.body;
+    ctx.fillRect(0, 0, 25, 25);
+    ctx.clearRect(0, 12, 13, 13);
+    ctx.fillStyle = p.letter;
+    ctx.font = 'bold 10px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('0', 17, 8);
+  },
+};
 
 // eslint-disable-next-line no-unused-vars -- accessed from index.html
 class SnakeGame {
@@ -141,6 +342,7 @@ class SnakeGame {
     this.messageElement = this.container.querySelector('.snake-message');
     this.overlay = this.container.querySelector('.snake-focus-overlay');
     this.CELL_SIZE = this.canvas.width / this.COLS;
+    this._createBitmaps();
   }
 
   _bindEvents() {
@@ -576,46 +778,23 @@ class SnakeGame {
       );
     }
 
-    this.ctx.fillStyle =
-      this.state === 'warning'
-        ? COLOR_SNAKE_WARNING
-        : this.state === 'ignored'
-          ? COLOR_SNAKE_IGNORED
-          : COLOR_SNAKE_NORMAL;
-    this.snake.forEach((seg) => {
-      this.ctx.fillRect(seg.x * this.CELL_SIZE + 1, seg.y * this.CELL_SIZE + 1, this.CELL_SIZE - 2, this.CELL_SIZE - 2);
+    this.snake.forEach((seg, i) => {
+      let key = this._getSegmentBitmapKey(i);
+      if (i === 0 && this.speedBoostActive) {
+        key += '_b';
+      } else if (this.state === 'ignored') {
+        key += '_i';
+      } else if (this.state === 'warning') {
+        key += '_w';
+      }
+      this.ctx.drawImage(
+        this.bitmaps[key],
+        seg.x * this.CELL_SIZE,
+        seg.y * this.CELL_SIZE,
+        this.CELL_SIZE,
+        this.CELL_SIZE
+      );
     });
-
-    if (this.state === 'ignored') {
-      this.ctx.fillStyle = COLOR_SNAKE_HEAD_IGNORED;
-      const head = this.snake[0];
-      this.ctx.fillRect(
-        head.x * this.CELL_SIZE + 1,
-        head.y * this.CELL_SIZE + 1,
-        this.CELL_SIZE - 2,
-        this.CELL_SIZE - 2
-      );
-    } else if (!this.speedBoostActive) {
-      this.ctx.fillStyle = this.state === 'warning' ? COLOR_SNAKE_HEAD_WARNING : COLOR_SNAKE_HEAD_NORMAL;
-      const head = this.snake[0];
-      this.ctx.fillRect(
-        head.x * this.CELL_SIZE + 1,
-        head.y * this.CELL_SIZE + 1,
-        this.CELL_SIZE - 2,
-        this.CELL_SIZE - 2
-      );
-    }
-
-    if (this.speedBoostActive) {
-      this.ctx.fillStyle = COLOR_SNAKE_HEAD_BOOST;
-      const head = this.snake[0];
-      this.ctx.fillRect(
-        head.x * this.CELL_SIZE + 1,
-        head.y * this.CELL_SIZE + 1,
-        this.CELL_SIZE - 2,
-        this.CELL_SIZE - 2
-      );
-    }
 
     this.ctx.fillStyle = COLOR_FOOD;
     this.ctx.fillRect(
@@ -650,6 +829,75 @@ class SnakeGame {
       this.ctx.font = '24px Courier New';
       this.ctx.fillText(`Score: ${this.score}`, this.canvas.width / 2, this.canvas.height / 2 + 20);
     }
+  }
+
+  _createBitmaps() {
+    const sets = [
+      { palette: PALETTE_NORMAL, suffix: '' },
+      { palette: PALETTE_WARNING, suffix: '_w' },
+      { palette: PALETTE_IGNORED, suffix: '_i' },
+    ];
+
+    this.bitmaps = {};
+
+    for (const { palette, suffix } of sets) {
+      Object.assign(this.bitmaps, this._createBitmapSet(palette, suffix));
+    }
+
+    const boostHeadKeys = ['headUp', 'headDown', 'headLeft', 'headRight'];
+    for (const key of boostHeadKeys) {
+      this.bitmaps[`${key}_b`] = this._makeBitmap(key, PALETTE_BOOST);
+    }
+  }
+
+  _createBitmapSet(palette, suffix) {
+    const set = {};
+    for (const key of Object.keys(BITMAP_DRAWERS)) {
+      set[key + suffix] = this._makeBitmap(key, palette);
+    }
+    return set;
+  }
+
+  _makeBitmap(key, palette) {
+    const canvas = document.createElement('canvas');
+    canvas.width = this.CELL_SIZE;
+    canvas.height = this.CELL_SIZE;
+    const ctx = canvas.getContext('2d');
+    BITMAP_DRAWERS[key](ctx, palette);
+    return canvas;
+  }
+
+  _getSegmentBitmapKey(i) {
+    if (i === 0) {
+      const d = this.direction.x === 0 && this.direction.y === 0 ? { x: 1, y: 0 } : this.direction;
+      return `head${DIR_KEY[`${d.x},${d.y}`]}`;
+    }
+
+    const prev = this.snake[i - 1];
+    const curr = this.snake[i];
+    const dirIn = dirBetween(prev, curr, this.options.enableWrap);
+
+    if (i === this.snake.length - 1) {
+      const key = DIR_KEY[`${dirIn.x},${dirIn.y}`];
+      if (key) return `tail${key}`;
+      return Math.abs(dirIn.x) >= Math.abs(dirIn.y) ? 'bodyHoriz' : 'bodyVert';
+    }
+
+    const next = this.snake[i + 1];
+    const dirOut = dirBetween(curr, next, this.options.enableWrap);
+
+    const inCardinal = DIR_KEY[`${dirIn.x},${dirIn.y}`] !== undefined;
+    const outCardinal = DIR_KEY[`${dirOut.x},${dirOut.y}`] !== undefined;
+
+    if (!inCardinal || !outCardinal) {
+      return Math.abs(dirIn.x) >= Math.abs(dirIn.y) ? 'bodyHoriz' : 'bodyVert';
+    }
+
+    if (dirIn.x === dirOut.x && dirIn.y === dirOut.y) {
+      return dirIn.x !== 0 ? 'bodyHoriz' : 'bodyVert';
+    }
+
+    return CORNER_MAP[`${dirIn.x},${dirIn.y}->${dirOut.x},${dirOut.y}`];
   }
 
   _update() {
