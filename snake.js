@@ -110,10 +110,10 @@ const CORNER_MAP = {
 };
 
 // Bitmap palettes { body, head, eye, letter }
-const PALETTE_NORMAL = { body: '#4a7a4a', head: '#8ad88a', eye: '#0d1a0d', letter: '#fff' };
-const PALETTE_WARNING = { body: '#ff6666', head: '#ffaaaa', eye: '#4a0000', letter: '#fff' };
-const PALETTE_IGNORED = { body: '#c084fc', head: '#e2ccff', eye: '#4a0060', letter: '#fff' };
-const PALETTE_BOOST = { body: '#4a7a4a', head: '#f0e68c', eye: '#0d1a0d', letter: '#000' };
+const PALETTE_NORMAL = { body: '#4a7a4a', head: '#8ad88a', eye: '#0d1a0d' };
+const PALETTE_WARNING = { body: '#ff6666', head: '#ffaaaa', eye: '#4a0000' };
+const PALETTE_IGNORED = { body: '#c084fc', head: '#e2ccff', eye: '#4a0060' };
+const PALETTE_BOOST = { body: '#4a7a4a', head: '#f0e68c', eye: '#0d1a0d' };
 
 // Bitmap drawing functions — each receives (ctx, palette) on a 25×25 canvas
 const BITMAP_DRAWERS = {
@@ -125,11 +125,6 @@ const BITMAP_DRAWERS = {
     ctx.fillStyle = p.eye;
     ctx.fillRect(5, 3, 5, 4);
     ctx.fillRect(15, 3, 5, 4);
-    ctx.fillStyle = p.letter;
-    ctx.font = 'bold 10px monospace';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('U', 12.5, 16);
   },
   headDown(ctx, p) {
     ctx.fillStyle = p.body;
@@ -139,11 +134,6 @@ const BITMAP_DRAWERS = {
     ctx.fillStyle = p.eye;
     ctx.fillRect(5, 18, 5, 4);
     ctx.fillRect(15, 18, 5, 4);
-    ctx.fillStyle = p.letter;
-    ctx.font = 'bold 10px monospace';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('D', 12.5, 10);
   },
   headLeft(ctx, p) {
     ctx.fillStyle = p.body;
@@ -153,11 +143,6 @@ const BITMAP_DRAWERS = {
     ctx.fillStyle = p.eye;
     ctx.fillRect(3, 5, 4, 5);
     ctx.fillRect(3, 15, 4, 5);
-    ctx.fillStyle = p.letter;
-    ctx.font = 'bold 10px monospace';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('L', 16, 12.5);
   },
   headRight(ctx, p) {
     ctx.fillStyle = p.body;
@@ -167,125 +152,74 @@ const BITMAP_DRAWERS = {
     ctx.fillStyle = p.eye;
     ctx.fillRect(18, 5, 4, 5);
     ctx.fillRect(18, 15, 4, 5);
-    ctx.fillStyle = p.letter;
-    ctx.font = 'bold 10px monospace';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('R', 9, 12.5);
   },
   bodyHoriz(ctx, p) {
     ctx.fillStyle = p.body;
     ctx.fillRect(0, 0, 25, 25);
-    ctx.fillStyle = p.letter;
-    ctx.font = 'bold 10px monospace';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('H', 12.5, 12.5);
   },
   bodyVert(ctx, p) {
     ctx.fillStyle = p.body;
     ctx.fillRect(0, 0, 25, 25);
-    ctx.fillStyle = p.letter;
-    ctx.font = 'bold 10px monospace';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('V', 12.5, 12.5);
   },
   tailUp(ctx, p) {
     ctx.fillStyle = p.body;
     ctx.fillRect(0, 0, 25, 25);
-    ctx.clearRect(1, 0, 23, 8);
+    ctx.clearRect(0, 0, 25, 11);
     ctx.fillStyle = p.body;
-    ctx.fillRect(6, 5, 13, 3);
-    ctx.fillRect(9, 3, 7, 2);
-    ctx.fillRect(11, 2, 3, 1);
-    ctx.fillStyle = p.letter;
-    ctx.font = 'bold 10px monospace';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('u', 12.5, 18);
+    ctx.fillRect(9, 8, 7, 2);
+    ctx.fillRect(10, 6, 5, 2);
+    ctx.fillRect(11, 4, 3, 2);
+    ctx.fillRect(12, 3, 1, 1);
   },
   tailDown(ctx, p) {
     ctx.fillStyle = p.body;
     ctx.fillRect(0, 0, 25, 25);
-    ctx.clearRect(1, 17, 23, 8);
+    ctx.clearRect(0, 14, 25, 11);
     ctx.fillStyle = p.body;
-    ctx.fillRect(6, 17, 13, 3);
-    ctx.fillRect(9, 20, 7, 2);
-    ctx.fillRect(11, 22, 3, 1);
-    ctx.fillStyle = p.letter;
-    ctx.font = 'bold 10px monospace';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('d', 12.5, 8);
+    ctx.fillRect(9, 15, 7, 2);
+    ctx.fillRect(10, 17, 5, 2);
+    ctx.fillRect(11, 19, 3, 2);
+    ctx.fillRect(12, 21, 1, 1);
   },
   tailLeft(ctx, p) {
     ctx.fillStyle = p.body;
     ctx.fillRect(0, 0, 25, 25);
-    ctx.clearRect(0, 1, 8, 23);
+    ctx.clearRect(0, 0, 11, 25);
     ctx.fillStyle = p.body;
-    ctx.fillRect(5, 6, 3, 13);
-    ctx.fillRect(3, 9, 2, 7);
-    ctx.fillRect(2, 11, 1, 3);
-    ctx.fillStyle = p.letter;
-    ctx.font = 'bold 10px monospace';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('l', 17, 12.5);
+    ctx.fillRect(8, 9, 2, 7);
+    ctx.fillRect(6, 10, 2, 5);
+    ctx.fillRect(4, 11, 2, 3);
+    ctx.fillRect(3, 12, 1, 1);
   },
   tailRight(ctx, p) {
     ctx.fillStyle = p.body;
     ctx.fillRect(0, 0, 25, 25);
-    ctx.clearRect(17, 1, 8, 23);
+    ctx.clearRect(14, 0, 11, 25);
     ctx.fillStyle = p.body;
-    ctx.fillRect(17, 6, 3, 13);
-    ctx.fillRect(20, 9, 2, 7);
-    ctx.fillRect(22, 11, 1, 3);
-    ctx.fillStyle = p.letter;
-    ctx.font = 'bold 10px monospace';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('r', 8, 12.5);
+    ctx.fillRect(15, 9, 2, 7);
+    ctx.fillRect(17, 10, 2, 5);
+    ctx.fillRect(19, 11, 2, 3);
+    ctx.fillRect(21, 12, 1, 1);
   },
   cornerLD(ctx, p) {
     ctx.fillStyle = p.body;
     ctx.fillRect(0, 0, 25, 25);
     ctx.clearRect(12, 0, 13, 13);
-    ctx.fillStyle = p.letter;
-    ctx.font = 'bold 10px monospace';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('7', 8, 18);
   },
   cornerRD(ctx, p) {
     ctx.fillStyle = p.body;
     ctx.fillRect(0, 0, 25, 25);
     ctx.clearRect(0, 0, 13, 13);
-    ctx.fillStyle = p.letter;
-    ctx.font = 'bold 10px monospace';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('8', 17, 18);
   },
   cornerLU(ctx, p) {
     ctx.fillStyle = p.body;
     ctx.fillRect(0, 0, 25, 25);
     ctx.clearRect(12, 12, 13, 13);
-    ctx.fillStyle = p.letter;
-    ctx.font = 'bold 10px monospace';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('9', 8, 8);
   },
   cornerRU(ctx, p) {
     ctx.fillStyle = p.body;
     ctx.fillRect(0, 0, 25, 25);
     ctx.clearRect(0, 12, 13, 13);
-    ctx.fillStyle = p.letter;
-    ctx.font = 'bold 10px monospace';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('0', 17, 8);
   },
 };
 
