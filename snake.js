@@ -135,10 +135,10 @@ class SnakeGame {
 
     this.canvas = this.container.querySelector('.snake-canvas');
     this.ctx = this.canvas.getContext('2d');
-    this.scoreEl = this.container.querySelector('.snake-score');
-    this.timerEl = this.container.querySelector('.snake-timer');
-    this.bonusEl = this.container.querySelector('.snake-bonus');
-    this.messageEl = this.container.querySelector('.snake-message');
+    this.scoreElement = this.container.querySelector('.snake-score');
+    this.timerElement = this.container.querySelector('.snake-timer');
+    this.bonusElement = this.container.querySelector('.snake-bonus');
+    this.messageElement = this.container.querySelector('.snake-message');
     this.overlay = this.container.querySelector('.snake-focus-overlay');
     this.CELL_SIZE = this.canvas.width / this.COLS;
   }
@@ -206,12 +206,12 @@ class SnakeGame {
     if (this.options.enableWalls) {
       this.freeTiles -= WALLS.length;
     }
-    this.scoreEl.textContent = 'Score: 0';
-    this.timerEl.textContent = this.options.mode === MODE_TIME_TRIAL ? 'Time: 2:00' : 'Time: 0:00';
-    if (this.bonusEl) {
-      this.bonusEl.textContent = 'Bonus: 100';
+    this.scoreElement.textContent = 'Score: 0';
+    this.timerElement.textContent = this.options.mode === MODE_TIME_TRIAL ? 'Time: 2:00' : 'Time: 0:00';
+    if (this.bonusElement) {
+      this.bonusElement.textContent = 'Bonus: 100';
     }
-    this.messageEl.textContent = 'Press any arrow key to start';
+    this.messageElement.textContent = 'Press any arrow key to start';
     this.overlay.textContent = 'Click to focus';
     this._placeFood();
     this._draw();
@@ -363,7 +363,7 @@ class SnakeGame {
     clearInterval(this.scoreBonusInterval);
     this.scoreBonusInterval = setInterval(() => {
       this.scoreBonus = Math.max(0, this.scoreBonus - 1);
-      this.bonusEl.textContent = `Bonus: ${this.scoreBonus}`;
+      this.bonusElement.textContent = `Bonus: ${this.scoreBonus}`;
       if (this.scoreBonus === 0) {
         clearInterval(this.scoreBonusInterval);
       }
@@ -480,13 +480,13 @@ class SnakeGame {
         points += this.scoreBonus;
       }
       this.scoreBonus = 100;
-      if (this.bonusEl) {
-        this.bonusEl.textContent = `Bonus: ${this.scoreBonus}`;
+      if (this.bonusElement) {
+        this.bonusElement.textContent = `Bonus: ${this.scoreBonus}`;
       }
       this._startBonusDecay();
     }
     this.score += points;
-    this.scoreEl.textContent = `Score: ${this.score}`;
+    this.scoreElement.textContent = `Score: ${this.score}`;
     this.foodsEaten++;
     this.growth = 1;
     if (this.snake.length >= this.freeTiles) {
@@ -515,7 +515,7 @@ class SnakeGame {
 
   _eatBonusFood() {
     this.score += 100;
-    this.scoreEl.textContent = `Score: ${this.score}`;
+    this.scoreElement.textContent = `Score: ${this.score}`;
     if (this.options.enableShrinkOnBonusFood) {
       const shrunkLen = Math.ceil(this.snake.length / 2);
       if (this.options.mode !== MODE_CONSTRICTOR || shrunkLen >= 15) {
@@ -532,13 +532,13 @@ class SnakeGame {
     if (this.options.mode === MODE_TIME_TRIAL) {
       const remaining = Math.max(0, this.TIME_LIMIT - this.elapsed);
       const secs = Math.floor(remaining / 1000);
-      this.timerEl.textContent = `Time: ${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
+      this.timerElement.textContent = `Time: ${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
       if (remaining <= 0) {
         this._gameOver();
       }
     } else {
       const secs = Math.floor(this.elapsed / 1000);
-      this.timerEl.textContent = `Time: ${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
+      this.timerElement.textContent = `Time: ${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
     }
   }
 
@@ -787,7 +787,7 @@ class SnakeGame {
     this.state = 'warning';
     this.warningStart = Date.now();
     this.warningElapsed = 0;
-    this.messageEl.textContent = '';
+    this.messageElement.textContent = '';
     this.graceDirection = { x: this.direction.x, y: this.direction.y };
     this._draw();
     clearTimeout(this.warningTimeout);
@@ -805,7 +805,7 @@ class SnakeGame {
     this._deactivateSpeedBoost();
     this.state = 'ignored';
     this.inputBuffer = [];
-    this.messageEl.textContent = 'Snake stuck — press a safe direction';
+    this.messageElement.textContent = 'Snake stuck — press a safe direction';
     this._draw();
   }
 
@@ -813,7 +813,7 @@ class SnakeGame {
     this.canvas.focus();
     this.state = 'playing';
     this.startTime = Date.now() - this.elapsed;
-    this.messageEl.textContent = '';
+    this.messageElement.textContent = '';
     if (this.options.mode === MODE_CONSTRICTOR) {
       this.startGrowth = 14;
     }
@@ -833,7 +833,7 @@ class SnakeGame {
   _gameOver() {
     this._clearAllTimers();
     this.state = 'over';
-    this.messageEl.textContent = 'Game Over! Press Space to restart';
+    this.messageElement.textContent = 'Game Over! Press Space to restart';
     this._draw();
   }
 
@@ -960,7 +960,7 @@ class SnakeGame {
       this.nextDirection = newDir;
       this.graceDirection = { x: 0, y: 0 };
       this.state = 'playing';
-      this.messageEl.textContent = '';
+      this.messageElement.textContent = '';
       this.speedBoostActive = false;
       this.gameLoop = setInterval(() => this._update(), this.currentSpeed);
       if (this.options.enableBonusFood && this.bonusFood) {
@@ -990,7 +990,7 @@ class SnakeGame {
       this.direction = newDir;
       this.nextDirection = newDir;
       this.state = 'playing';
-      this.messageEl.textContent = '';
+      this.messageElement.textContent = '';
       this.gameLoop = setInterval(() => this._update(), this.currentSpeed);
       this._resumeCommonTimers();
       return;
