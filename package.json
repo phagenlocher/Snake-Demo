@@ -5,9 +5,8 @@
   "main": "snake.js",
   "scripts": {
     "lint": "eslint snake.js",
-    "format": "prettier --write snake.js index.html snake.css",
-    "format:check": "prettier --check snake.js index.html snake.css",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "format": "prettier --write snake.js",
+    "format:check": "prettier --check snake.js"
   },
   "repository": {
     "type": "git",
