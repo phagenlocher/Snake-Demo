@@ -45,8 +45,8 @@ const WARNING_TIMEOUT_MS = 700;
 const BONUS_FOOD_LIFETIME_MS = 5000;
 const BONUS_FOOD_SPAWN_INTERVAL_MS = 15000;
 const SCORE_BONUS_DECAY_INTERVAL_MS = 200;
-const FOOD_PLACE_MAX_RETRIES = 100;
 
+// eslint-disable-next-line no-unused-vars -- accessed from index.html
 class SnakeGame {
   constructor(container, options = {}) {
     this.container = container;
@@ -227,7 +227,7 @@ class SnakeGame {
     if (!this.bonusFood) return;
     const dirs = [{ x: 0, y: -1 }, { x: 0, y: 1 }, { x: -1, y: 0 }, { x: 1, y: 0 }];
     const dir = dirs[Math.floor(Math.random() * dirs.length)];
-    let next = { x: this.bonusFood.x + dir.x, y: this.bonusFood.y + dir.y };
+    const next = { x: this.bonusFood.x + dir.x, y: this.bonusFood.y + dir.y };
     const obstacleFree = () =>
       !this.snake.some(s => s.x === next.x && s.y === next.y) &&
       !(this.options.enableWalls && WALLS.some(w => w.x === next.x && w.y === next.y));

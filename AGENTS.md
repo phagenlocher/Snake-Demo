@@ -8,7 +8,8 @@ Open `index.html` directly in a browser.
 
 ## Build, Lint, Typecheck, Test
 
-No tooling is configured. This is a zero-dependency static page.
+- **Lint**: `npm run lint` — runs ESLint (`eslint.config.js`) against `snake.js`.
+- **Build / Test / Typecheck**: no tooling configured. This remains a zero-build static page.
 
 ## Game Modes
 

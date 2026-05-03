@@ -1,0 +1,26 @@
+{
+  "name": "snake-demo",
+  "version": "1.0.0",
+  "description": "A vanilla HTML/CSS/JS Snake game designed as a **teaching tool for game design**. Each feature lives behind a toggle, so you can turn mechanics on and off to see how they affect gameplay.",
+  "main": "snake.js",
+  "scripts": {
+    "lint": "eslint snake.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/phagenlocher/Snake-Demo.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/phagenlocher/Snake-Demo/issues"
+  },
+  "homepage": "https://github.com/phagenlocher/Snake-Demo#readme",
+  "devDependencies": {
+    "eslint": "^10.3.0",
+    "globals": "^17.6.0"
+  }
+}
