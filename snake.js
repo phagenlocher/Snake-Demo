@@ -467,6 +467,7 @@ class SnakeGame {
 
   _update() {
     if (this.options.enableInputBuffer) {
+      const prevDir = { x: this.direction.x, y: this.direction.y };
       let effectiveDir = (this.graceDirection.x !== 0 || this.graceDirection.y !== 0)
         ? this.graceDirection
         : this.direction;
@@ -482,6 +483,9 @@ class SnakeGame {
       }
 
       this.direction = effectiveDir;
+      if (prevDir.x !== this.direction.x || prevDir.y !== this.direction.y) {
+        this._deactivateSpeedBoost();
+      }
 
       if (this.graceDirection.x !== 0 || this.graceDirection.y !== 0) {
         this.graceDirection = { x: 0, y: 0 };
