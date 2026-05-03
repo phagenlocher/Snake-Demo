@@ -1,5 +1,6 @@
 const globals = require('globals');
 const js = require('@eslint/js');
+const prettier = require('eslint-config-prettier');
 
 module.exports = [
   js.configs.recommended,
@@ -13,7 +14,7 @@ module.exports = [
     rules: {
       'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
       'no-undef': 'error',
-      'eqeqeq': ['error', 'always', { null: 'ignore' }],
+      eqeqeq: ['error', 'always', { null: 'ignore' }],
       'no-var': 'warn',
       'prefer-const': 'warn',
       'no-extra-semi': 'warn',
@@ -22,10 +23,10 @@ module.exports = [
       'no-unsafe-negation': 'error',
       'no-cond-assign': ['error', 'always'],
       'no-constant-condition': 'warn',
-      'curly': ['error', 'all'],
+      curly: ['error', 'all'],
       'dot-notation': 'error',
       'no-throw-literal': 'error',
-      'radix': 'error',
+      radix: 'error',
       'no-eval': 'error',
       'prefer-template': 'warn',
       'prefer-arrow-callback': 'warn',
@@ -34,4 +35,5 @@ module.exports = [
       'no-array-constructor': 'warn',
     },
   },
+  prettier,
 ];

@@ -7,7 +7,11 @@ To the extent possible under law, the author(s) have dedicated all copyright and
 
 You should have received a copy of the CC0 Public Domain Dedication along with this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 */
-* { margin: 0; padding: 0; box-sizing: border-box; }
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
 body {
   background: #1a1a1a;
   display: flex;
@@ -30,7 +34,7 @@ body {
   letter-spacing: 1px;
 }
 .snake-hud .snake-bonus {
-  color: #FFD700;
+  color: #ffd700;
 }
 .snake-canvas {
   display: block;
@@ -91,7 +95,7 @@ body {
   gap: 6px;
   cursor: pointer;
 }
-.snake-toggle-grid input[type="checkbox"] {
+.snake-toggle-grid input[type='checkbox'] {
   accent-color: #4a7a4a;
   width: 20px;
   height: 20px;
