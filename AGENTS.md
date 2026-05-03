@@ -141,13 +141,25 @@ Enables queuing rapid direction inputs so they aren't lost between game ticks.
 - **Grace period**: During warning state, `graceDirection` is used as the reference direction for buffer processing.
 - **When disabled**: Classic behavior — `nextDirection` is set directly on keypress; only the last keypress before a tick takes effect; no buffering.
 
+### `enableInstantMovement` (default: `true`)
+
+Changes how keystrokes are consumed. Instead of waiting for the next tick, the snake moves immediately when a valid arrow key is pressed.
+
+- **Mechanism**: In the `playing` state, after processing a valid direction input, `_update()` is called immediately and the game loop interval is reset so the next automatic tick fires after a full `currentSpeed` delay.
+- **Valid inputs**: Same-direction presses (triggers speed boost if enabled + instant move) and new-direction presses (not opposite to current or buffered direction) trigger instant movement. Opposite-direction presses are ignored entirely — no instant move occurs.
+- **Game loop reset**: After each instant move, `clearInterval` + `setInterval` restarts the automatic tick timer from zero, preventing rapid double-moves.
+- **Input buffer interaction**: When both `enableInputBuffer` and `enableInstantMovement` are enabled, each keypress pushes to the buffer then immediately triggers `_update()`, which consumes one buffer entry. The buffer still provides direction validation and opposite-direction protection.
+- **Speed boost interaction**: Same-direction presses activate speed boost normally and trigger an instant move at the boosted speed. The loop reset picks up the boosted interval.
+- **Grace period / ignored states**: No effect — instant movement only applies when `state === 'playing'` and the game loop is actively running.
+- **When disabled**: Classic behavior — inputs are consumed on the next `setInterval` tick via `_update()`.
+
 ### `enableTimedBonusFood` (default: `true`)
 
 Replaces the food-count-based bonus food spawn with a time-based trigger.
 
 - **Mechanism**: A `setInterval` fires every 15 000 ms. If no bonus food is currently on the board, `_placeBonusFood()` is called.
 - **Dependency**: Requires `enableBonusFood` to also be enabled; otherwise does nothing.
-- **Replacement behavior**: When this option is on, the `foodsEaten % 5 === 0` trigger in `_update()` is bypassed entirely — bonus food spawns *only* from the 15-second timer.
+- **Replacement behavior**: When this option is on, the `foodsEaten % 5 === 0` trigger in `_update()` is bypassed entirely — bonus food spawns _only_ from the 15-second timer.
 - **Pause/resume**: Timer is cleared on pause (via `_clearAllTimers()`) and restarted fresh on resume via `_startBonusFoodTimer()`.
 - **When disabled**: Bonus food spawns via the original food-count mechanic (every 5 regular foods eaten).
 
@@ -170,7 +182,7 @@ Enables static walls arranged as a hollow square ring with openings in the cente
   - `snake.js` — `SnakeGame` class
   - `snake.css` — styles
 - **Class-based**: `SnakeGame` class with `constructor(container, options)`, `init()`, `destroy()`, `_buildDOM()`, `_bindEvents()`
-- **Options**: `mode` (`'classic'`, `'timeTrial'`, or `'constrictor'`), `enableBonusFood`, `enableGracePeriod`, `enableShrinkOnBonusFood`, `enableSpeedUp`, `enableScoreBonus`, `enableWrap`, `enableSpeedBoost`, `enableInputBuffer`, `enableTimedBonusFood`, `enableWalls` — toggled via UI; game remounts on change
+- **Options**: `mode` (`'classic'`, `'timeTrial'`, or `'constrictor'`), `enableBonusFood`, `enableGracePeriod`, `enableShrinkOnBonusFood`, `enableSpeedUp`, `enableScoreBonus`, `enableWrap`, `enableSpeedBoost`, `enableInputBuffer`, `enableInstantMovement`, `enableTimedBonusFood`, `enableWalls` — toggled via UI; game remounts on change
 - **Canvas**: 400×400px, grid size `GRID=20`, columns/rows computed from canvas dimensions
 - **HUD**: Score display + bonus score + timer (`Time: M:SS`)
 - **State machine**: `waiting` → `playing` → `warning`/`ignored` → `over` (space restarts to `waiting`); pause/resume via canvas focus/blur

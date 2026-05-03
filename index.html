@@ -69,11 +69,20 @@ You should have received a copy of the CC0 Public Domain Dedication along with t
             </div>
           </div>
           <div class="snake-toggle-group">
-            <p class="snake-toggle-heading">Miscellaneous</p>
+            <p class="snake-toggle-heading">Input Handling</p>
             <div class="snake-toggle-grid">
               <label title="Queues rapid direction inputs so they aren't lost between ticks"
                 ><input type="checkbox" class="snake-toggle-input-buffer" checked /> Input Buffer</label
               >
+              <label
+                title="Snake moves immediately when a key is pressed, instead of waiting for the next tick. Opposite-direction presses are ignored."
+                ><input type="checkbox" class="snake-toggle-instant-movement" checked /> Instant Movement</label
+              >
+            </div>
+          </div>
+          <div class="snake-toggle-group">
+            <p class="snake-toggle-heading">Level Design</p>
+            <div class="snake-toggle-grid">
               <label title="Static walls form a hollow square with openings in the center of each side"
                 ><input type="checkbox" class="snake-toggle-walls" checked /> Static Walls</label
               >
@@ -99,6 +108,7 @@ You should have received a copy of the CC0 Public Domain Dedication along with t
       const toggleInputBuffer = document.querySelector('.snake-toggle-input-buffer');
       const toggleTimedBonus = document.querySelector('.snake-toggle-timed-bonus');
       const toggleWalls = document.querySelector('.snake-toggle-walls');
+      const toggleInstantMovement = document.querySelector('.snake-toggle-instant-movement');
 
       let game = null;
 
@@ -113,6 +123,7 @@ You should have received a copy of the CC0 Public Domain Dedication along with t
           enableWrap: toggleWrap.checked,
           enableSpeedBoost: toggleSpeedBoost.checked,
           enableInputBuffer: toggleInputBuffer.checked,
+          enableInstantMovement: toggleInstantMovement.checked,
           enableTimedBonusFood: toggleTimedBonus.checked,
           enableWalls: toggleWalls.checked,
         };
@@ -133,6 +144,7 @@ You should have received a copy of the CC0 Public Domain Dedication along with t
           if (typeof s.enableWrap === 'boolean') toggleWrap.checked = s.enableWrap;
           if (typeof s.enableSpeedBoost === 'boolean') toggleSpeedBoost.checked = s.enableSpeedBoost;
           if (typeof s.enableInputBuffer === 'boolean') toggleInputBuffer.checked = s.enableInputBuffer;
+          if (typeof s.enableInstantMovement === 'boolean') toggleInstantMovement.checked = s.enableInstantMovement;
           if (typeof s.enableTimedBonusFood === 'boolean') toggleTimedBonus.checked = s.enableTimedBonusFood;
           if (typeof s.enableWalls === 'boolean') toggleWalls.checked = s.enableWalls;
         } catch (_) {
@@ -154,6 +166,7 @@ You should have received a copy of the CC0 Public Domain Dedication along with t
           enableWrap: toggleWrap.checked,
           enableSpeedBoost: toggleSpeedBoost.checked,
           enableInputBuffer: toggleInputBuffer.checked,
+          enableInstantMovement: toggleInstantMovement.checked,
           enableTimedBonusFood: toggleTimedBonus.checked,
           enableWalls: toggleWalls.checked,
         });
@@ -169,6 +182,7 @@ You should have received a copy of the CC0 Public Domain Dedication along with t
       toggleWrap.addEventListener('change', mountGame);
       toggleSpeedBoost.addEventListener('change', mountGame);
       toggleInputBuffer.addEventListener('change', mountGame);
+      toggleInstantMovement.addEventListener('change', mountGame);
       toggleTimedBonus.addEventListener('change', mountGame);
       toggleWalls.addEventListener('change', mountGame);
 

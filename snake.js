@@ -96,6 +96,7 @@ class SnakeGame {
       enableWrap: options.enableWrap !== undefined ? options.enableWrap : true,
       enableSpeedBoost: options.enableSpeedBoost !== undefined ? options.enableSpeedBoost : true,
       enableInputBuffer: options.enableInputBuffer !== undefined ? options.enableInputBuffer : true,
+      enableInstantMovement: options.enableInstantMovement !== undefined ? options.enableInstantMovement : true,
       enableTimedBonusFood: options.enableTimedBonusFood !== undefined ? options.enableTimedBonusFood : true,
       enableWalls: options.enableWalls !== undefined ? options.enableWalls : true,
     };
@@ -801,11 +802,12 @@ class SnakeGame {
 
   _activateSpeedBoost() {
     if (!this.options.enableSpeedBoost || this.speedBoostActive) {
-      return;
+      return false;
     }
     this.speedBoostActive = true;
     clearInterval(this.gameLoop);
     this.gameLoop = setInterval(() => this._update(), this.currentSpeed / SPEED_BOOST_FACTOR);
+    return true;
   }
 
   _deactivateSpeedBoost() {
@@ -906,15 +908,28 @@ class SnakeGame {
           this.inputBuffer.push(newDir);
         }
       }
+      let acceptedInput = false;
       if (newDir.x === this.direction.x && newDir.y === this.direction.y) {
-        this._activateSpeedBoost();
+        acceptedInput = this._activateSpeedBoost();
       } else if (newDir.x !== -this.direction.x || newDir.y !== -this.direction.y) {
         if (!this.options.enableInputBuffer) {
           this.nextDirection = newDir;
         }
         this._deactivateSpeedBoost();
+        acceptedInput = true;
       } else {
         this._deactivateSpeedBoost();
+      }
+
+      if (this.options.enableInstantMovement && acceptedInput && this.state === 'playing') {
+        this._update();
+        if (this.state === 'playing') {
+          clearInterval(this.gameLoop);
+          this.gameLoop = setInterval(
+            () => this._update(),
+            this.speedBoostActive ? this.currentSpeed / SPEED_BOOST_FACTOR : this.currentSpeed
+          );
+        }
       }
     }
   }
