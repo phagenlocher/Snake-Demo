@@ -226,10 +226,10 @@ Four color palettes define segment colors for different game states. Each palett
 | `tailDown`  | 174-183 | Tapered tail pointing down (4-step gradual taper)          |
 | `tailLeft`  | 184-193 | Tapered tail pointing left (4-step gradual taper)          |
 | `tailRight` | 194-203 | Tapered tail pointing right (4-step gradual taper)         |
-| `cornerLD`  | 204-208 | Left→down corner (clears top-right quadrant)               |
-| `cornerRD`  | 209-213 | Right→down corner (clears top-left quadrant)               |
-| `cornerLU`  | 214-218 | Left→up corner (clears bottom-right quadrant)              |
-| `cornerRU`  | 219-223 | Right→up corner (clears bottom-left quadrant)              |
+| `cornerLD`  | 204-208 | Left→down corner (clears top-left quadrant)                |
+| `cornerRD`  | 209-213 | Right→down corner (clears top-right quadrant)              |
+| `cornerLU`  | 214-218 | Left→up corner (clears bottom-left quadrant)               |
+| `cornerRU`  | 219-223 | Right→up corner (clears bottom-right quadrant)             |
 
 ### Bitmap Creation (`_createBitmaps`, `snake.js:768-785`)
 
@@ -270,14 +270,14 @@ const DIR_KEY = { '0,-1': 'Up', '0,1': 'Down', '-1,0': 'Left', '1,0': 'Right' };
 
 // Incoming→outgoing direction → corner shape
 const CORNER_MAP = {
-  '1,0->0,1': 'cornerLD', // right→down
-  '0,-1->1,0': 'cornerRD', // up→right
-  '-1,0->0,1': 'cornerRD', // left→down
-  '0,-1->-1,0': 'cornerLD', // up→left
-  '1,0->0,-1': 'cornerLU', // right→up
-  '0,1->1,0': 'cornerRU', // down→right
-  '-1,0->0,-1': 'cornerRU', // left→up
-  '0,1->-1,0': 'cornerLU', // down→left
+  'Right->Down': 'cornerRD',
+  'Up->Right': 'cornerLD',
+  'Left->Down': 'cornerLD',
+  'Up->Left': 'cornerRD',
+  'Right->Up': 'cornerRU',
+  'Down->Right': 'cornerLU',
+  'Left->Up': 'cornerLU',
+  'Down->Left': 'cornerRU',
 };
 ```
 

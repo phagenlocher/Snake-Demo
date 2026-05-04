@@ -99,14 +99,14 @@ const DIR_KEY = {
 };
 
 const CORNER_MAP = {
-  '1,0->0,1': 'cornerLD',
-  '0,-1->1,0': 'cornerRD',
-  '-1,0->0,1': 'cornerRD',
-  '0,-1->-1,0': 'cornerLD',
-  '1,0->0,-1': 'cornerLU',
-  '0,1->1,0': 'cornerRU',
-  '-1,0->0,-1': 'cornerRU',
-  '0,1->-1,0': 'cornerLU',
+  'Right->Down': 'cornerRD',
+  'Up->Right': 'cornerLD',
+  'Left->Down': 'cornerLD',
+  'Up->Left': 'cornerRD',
+  'Right->Up': 'cornerRU',
+  'Down->Right': 'cornerLU',
+  'Left->Up': 'cornerLU',
+  'Down->Left': 'cornerRU',
 };
 
 // Bitmap palettes { body, head, eye, letter }
@@ -163,63 +163,75 @@ const BITMAP_DRAWERS = {
   },
   tailUp(ctx, p) {
     ctx.fillStyle = p.body;
-    ctx.fillRect(0, 0, 25, 25);
-    ctx.clearRect(0, 0, 25, 11);
-    ctx.fillStyle = p.body;
-    ctx.fillRect(9, 8, 7, 2);
-    ctx.fillRect(10, 6, 5, 2);
-    ctx.fillRect(11, 4, 3, 2);
-    ctx.fillRect(12, 3, 1, 1);
+    ctx.fillRect(0, 12.5, 25, 12.5);
+    ctx.beginPath();
+    ctx.arc(12.5, 12.5, 12.5, Math.PI, 2 * Math.PI);
+    ctx.fill();
   },
   tailDown(ctx, p) {
     ctx.fillStyle = p.body;
-    ctx.fillRect(0, 0, 25, 25);
-    ctx.clearRect(0, 14, 25, 11);
-    ctx.fillStyle = p.body;
-    ctx.fillRect(9, 15, 7, 2);
-    ctx.fillRect(10, 17, 5, 2);
-    ctx.fillRect(11, 19, 3, 2);
-    ctx.fillRect(12, 21, 1, 1);
+    ctx.fillRect(0, 0, 25, 12.5);
+    ctx.beginPath();
+    ctx.arc(12.5, 12.5, 12.5, 0, Math.PI);
+    ctx.fill();
   },
   tailLeft(ctx, p) {
     ctx.fillStyle = p.body;
-    ctx.fillRect(0, 0, 25, 25);
-    ctx.clearRect(0, 0, 11, 25);
-    ctx.fillStyle = p.body;
-    ctx.fillRect(8, 9, 2, 7);
-    ctx.fillRect(6, 10, 2, 5);
-    ctx.fillRect(4, 11, 2, 3);
-    ctx.fillRect(3, 12, 1, 1);
+    ctx.fillRect(12.5, 0, 12.5, 25);
+    ctx.beginPath();
+    ctx.arc(12.5, 12.5, 12.5, Math.PI / 2, (3 * Math.PI) / 2);
+    ctx.fill();
   },
   tailRight(ctx, p) {
     ctx.fillStyle = p.body;
-    ctx.fillRect(0, 0, 25, 25);
-    ctx.clearRect(14, 0, 11, 25);
-    ctx.fillStyle = p.body;
-    ctx.fillRect(15, 9, 2, 7);
-    ctx.fillRect(17, 10, 2, 5);
-    ctx.fillRect(19, 11, 2, 3);
-    ctx.fillRect(21, 12, 1, 1);
-  },
-  cornerLD(ctx, p) {
-    ctx.fillStyle = p.body;
-    ctx.fillRect(0, 0, 25, 25);
-    ctx.clearRect(12, 0, 13, 13);
+    ctx.fillRect(0, 0, 12.5, 25);
+    ctx.beginPath();
+    ctx.arc(12.5, 12.5, 12.5, -Math.PI / 2, Math.PI / 2);
+    ctx.fill();
   },
   cornerRD(ctx, p) {
     ctx.fillStyle = p.body;
-    ctx.fillRect(0, 0, 25, 25);
-    ctx.clearRect(0, 0, 13, 13);
+    ctx.fillRect(0, 0, 12.5, 12.5);
+    ctx.fillRect(0, 12.5, 12.5, 12.5);
+    ctx.fillRect(12.5, 12.5, 12.5, 12.5);
+    ctx.beginPath();
+    ctx.moveTo(12.5, 12.5);
+    ctx.arc(12.5, 12.5, 12.5, (Math.PI * 3) / 2, 0);
+    ctx.closePath();
+    ctx.fill();
   },
-  cornerLU(ctx, p) {
+  cornerLD(ctx, p) {
     ctx.fillStyle = p.body;
-    ctx.fillRect(0, 0, 25, 25);
-    ctx.clearRect(12, 12, 13, 13);
+    ctx.fillRect(12.5, 0, 12.5, 12.5);
+    ctx.fillRect(0, 12.5, 12.5, 12.5);
+    ctx.fillRect(12.5, 12.5, 12.5, 12.5);
+    ctx.beginPath();
+    ctx.moveTo(12.5, 12.5);
+    ctx.arc(12.5, 12.5, 12.5, Math.PI, (Math.PI * 3) / 2);
+    ctx.closePath();
+    ctx.fill();
   },
   cornerRU(ctx, p) {
     ctx.fillStyle = p.body;
-    ctx.fillRect(0, 0, 25, 25);
-    ctx.clearRect(0, 12, 13, 13);
+    ctx.fillRect(0, 0, 12.5, 12.5);
+    ctx.fillRect(12.5, 0, 12.5, 12.5);
+    ctx.fillRect(0, 12.5, 12.5, 12.5);
+    ctx.beginPath();
+    ctx.moveTo(12.5, 12.5);
+    ctx.arc(12.5, 12.5, 12.5, 0, Math.PI / 2);
+    ctx.closePath();
+    ctx.fill();
+  },
+  cornerLU(ctx, p) {
+    ctx.fillStyle = p.body;
+    ctx.fillRect(0, 0, 12.5, 12.5);
+    ctx.fillRect(12.5, 0, 12.5, 12.5);
+    ctx.fillRect(12.5, 12.5, 12.5, 12.5);
+    ctx.beginPath();
+    ctx.moveTo(12.5, 12.5);
+    ctx.arc(12.5, 12.5, 12.5, Math.PI / 2, Math.PI);
+    ctx.closePath();
+    ctx.fill();
   },
 };
 
@@ -831,7 +843,9 @@ class SnakeGame {
       return dirIn.x !== 0 ? 'bodyHoriz' : 'bodyVert';
     }
 
-    return CORNER_MAP[`${dirIn.x},${dirIn.y}->${dirOut.x},${dirOut.y}`];
+    const inName = DIR_KEY[`${dirIn.x},${dirIn.y}`];
+    const outName = DIR_KEY[`${dirOut.x},${dirOut.y}`];
+    return CORNER_MAP[`${inName}->${outName}`];
   }
 
   _update() {
