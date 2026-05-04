@@ -81,7 +81,7 @@ const BONUS_FOOD_LIFETIME_MS = 5000;
 const BONUS_FOOD_SPAWN_INTERVAL_MS = 15000;
 const SCORE_BONUS_DECAY_INTERVAL_MS = 200;
 
-// Bitmap helpers
+// Tile helpers
 function dirBetween(a, b, enableWrap) {
   const d = { x: b.x - a.x, y: b.y - a.y };
   if (enableWrap) {
@@ -109,14 +109,14 @@ const CORNER_MAP = {
   'Down->Left': 'cornerRU',
 };
 
-// Bitmap palettes { body, head, eye, letter }
+// Tile palettes { body, head, eye, letter }
 const PALETTE_NORMAL = { body: '#4a7a4a', head: '#8ad88a', eye: '#0d1a0d' };
 const PALETTE_WARNING = { body: '#ff6666', head: '#ffaaaa', eye: '#4a0000' };
 const PALETTE_IGNORED = { body: '#c084fc', head: '#e2ccff', eye: '#4a0060' };
 const PALETTE_BOOST = { body: '#4a7a4a', head: '#f0e68c', eye: '#0d1a0d' };
 
-// Bitmap drawing functions — each receives (ctx, palette) on a 25×25 canvas
-const BITMAP_DRAWERS = {
+// Tile drawing functions — each receives (ctx, palette) on a 25×25 canvas
+const TILE_RENDERERS = {
   headUp(ctx, p) {
     ctx.fillStyle = p.body;
     ctx.fillRect(0, 0, 26, 26);
@@ -288,7 +288,7 @@ class SnakeGame {
     this.messageElement = this.container.querySelector('.snake-message');
     this.overlay = this.container.querySelector('.snake-focus-overlay');
     this.CELL_SIZE = this.canvas.width / this.COLS;
-    this._createBitmaps();
+    this._createTiles();
   }
 
   _bindEvents() {
@@ -725,7 +725,7 @@ class SnakeGame {
     }
 
     this.snake.forEach((seg, i) => {
-      let key = this._getSegmentBitmapKey(i);
+      let key = this._getSegmentTileKey(i);
       if (i === 0 && this.speedBoostActive) {
         key += '_b';
       } else if (this.state === 'ignored') {
@@ -734,7 +734,7 @@ class SnakeGame {
         key += '_w';
       }
       this.ctx.drawImage(
-        this.bitmaps[key],
+        this.tiles[key],
         seg.x * this.CELL_SIZE,
         seg.y * this.CELL_SIZE,
         this.CELL_SIZE,
@@ -777,43 +777,43 @@ class SnakeGame {
     }
   }
 
-  _createBitmaps() {
+  _createTiles() {
     const sets = [
       { palette: PALETTE_NORMAL, suffix: '' },
       { palette: PALETTE_WARNING, suffix: '_w' },
       { palette: PALETTE_IGNORED, suffix: '_i' },
     ];
 
-    this.bitmaps = {};
+    this.tiles = {};
 
     for (const { palette, suffix } of sets) {
-      Object.assign(this.bitmaps, this._createBitmapSet(palette, suffix));
+      Object.assign(this.tiles, this._createTileSet(palette, suffix));
     }
 
     const boostHeadKeys = ['headUp', 'headDown', 'headLeft', 'headRight'];
     for (const key of boostHeadKeys) {
-      this.bitmaps[`${key}_b`] = this._makeBitmap(key, PALETTE_BOOST);
+      this.tiles[`${key}_b`] = this._makeTile(key, PALETTE_BOOST);
     }
   }
 
-  _createBitmapSet(palette, suffix) {
+  _createTileSet(palette, suffix) {
     const set = {};
-    for (const key of Object.keys(BITMAP_DRAWERS)) {
-      set[key + suffix] = this._makeBitmap(key, palette);
+    for (const key of Object.keys(TILE_RENDERERS)) {
+      set[key + suffix] = this._makeTile(key, palette);
     }
     return set;
   }
 
-  _makeBitmap(key, palette) {
+  _makeTile(key, palette) {
     const canvas = document.createElement('canvas');
     canvas.width = this.CELL_SIZE + 1;
     canvas.height = this.CELL_SIZE + 1;
     const ctx = canvas.getContext('2d');
-    BITMAP_DRAWERS[key](ctx, palette);
+    TILE_RENDERERS[key](ctx, palette);
     return canvas;
   }
 
-  _getSegmentBitmapKey(i) {
+  _getSegmentTileKey(i) {
     if (i === 0) {
       const d = this.direction.x === 0 && this.direction.y === 0 ? { x: 1, y: 0 } : this.direction;
       return `head${DIR_KEY[`${d.x},${d.y}`]}`;
