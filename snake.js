@@ -54,12 +54,10 @@ const WALLS = [
   { x: 16, y: 15 },
 ];
 
-// Modes
 const MODE_CLASSIC = 'classic';
 const MODE_TIME_TRIAL = 'timeTrial';
 const MODE_CONSTRICTOR = 'constrictor';
 
-// States
 const STATE = Object.freeze({
   WAITING: 'waiting',
   PLAYING: 'playing',
@@ -76,7 +74,6 @@ const STATE_TRANSITIONS = Object.freeze({
   [STATE.OVER]: [STATE.WAITING],
 });
 
-// Colors
 const COLOR_BG = '#0d1a0d';
 const COLOR_WALL_BODY = '#555';
 const COLOR_WALL_EDGE_LIGHT = '#777';
@@ -98,7 +95,6 @@ const BONUS_FOOD_LIFETIME_MS = 5000;
 const BONUS_FOOD_SPAWN_INTERVAL_MS = 15000;
 const SCORE_BONUS_DECAY_INTERVAL_MS = 200;
 
-// Tile helpers
 function dirBetween(a, b, enableWrap) {
   const d = { x: b.x - a.x, y: b.y - a.y };
   if (enableWrap) {
@@ -126,13 +122,11 @@ const CORNER_MAP = {
   'Down->Left': 'cornerRU',
 };
 
-// Tile palettes { body, head, eye, letter }
 const PALETTE_NORMAL = { body: '#4a7a4a', head: '#8ad88a', eye: '#0d1a0d' };
 const PALETTE_WARNING = { body: '#ff6666', head: '#ffaaaa', eye: '#4a0000' };
 const PALETTE_IGNORED = { body: '#c084fc', head: '#e2ccff', eye: '#4a0060' };
 const PALETTE_BOOST = { body: '#4a7a4a', head: '#f0e68c', eye: '#0d1a0d' };
 
-// Tile drawing functions — each receives (ctx, palette) on a 25×25 canvas
 const TILE_RENDERERS = {
   headUp(ctx, p) {
     ctx.fillStyle = p.body;
@@ -291,6 +285,560 @@ class TimerManager {
   }
 }
 
+// ─── WallsManager: enableWalls ──────────────────────────────────────────────
+
+class WallsManager {
+  constructor(game) {
+    this.game = game;
+    this._wallSet = new Set(WALLS.map((w) => `${w.x},${w.y}`));
+  }
+
+  get enabled() {
+    return this.game.options.enableWalls;
+  }
+
+  isWallAt(x, y) {
+    return this.enabled && this._wallSet.has(`${x},${y}`);
+  }
+
+  getWallSet() {
+    return this.enabled ? this._wallSet : new Set();
+  }
+
+  get count() {
+    return WALLS.length;
+  }
+
+  draw(ctx, cellSize) {
+    if (!this.enabled) return;
+    WALLS.forEach((w) => {
+      ctx.fillStyle = COLOR_WALL_BODY;
+      ctx.fillRect(w.x * cellSize, w.y * cellSize, cellSize, cellSize);
+      ctx.fillStyle = COLOR_WALL_EDGE_LIGHT;
+      ctx.fillRect(w.x * cellSize, w.y * cellSize, cellSize - 1, 1);
+      ctx.fillRect(w.x * cellSize, w.y * cellSize, 1, cellSize - 1);
+      ctx.fillStyle = COLOR_WALL_EDGE_DARK;
+      ctx.fillRect((w.x + 1) * cellSize - 1, w.y * cellSize, 1, cellSize);
+      ctx.fillRect(w.x * cellSize, (w.y + 1) * cellSize - 1, cellSize, 1);
+    });
+  }
+}
+
+// ─── BoundaryManager: enableWrap ────────────────────────────────────────────
+
+class BoundaryManager {
+  constructor(game) {
+    this.game = game;
+  }
+
+  get enabled() {
+    return this.game.options.enableWrap;
+  }
+
+  wrap(pos) {
+    if (!this.enabled) return pos;
+    pos.x = (pos.x + this.game.COLS) % this.game.COLS;
+    pos.y = (pos.y + this.game.ROWS) % this.game.ROWS;
+    return pos;
+  }
+
+  isInBounds(x, y) {
+    return x >= 0 && x < this.game.COLS && y >= 0 && y < this.game.ROWS;
+  }
+
+  dirBetween(a, b) {
+    return dirBetween(a, b, this.enabled);
+  }
+}
+
+// ─── WormholesManager: enableWormholes ──────────────────────────────────────
+
+class WormholesManager {
+  constructor(game) {
+    this.game = game;
+    this.entry = null;
+    this.exit = null;
+  }
+
+  get enabled() {
+    return this.game.options.enableWormholes;
+  }
+
+  trySpawn() {
+    if (!this.enabled) return;
+    if (this.game.freeTiles - this.game.snake.length <= WORMHOLE_MIN_FREE_TILES) return;
+    let entry, exit;
+    do {
+      entry = { x: Math.floor(Math.random() * this.game.COLS), y: Math.floor(Math.random() * this.game.ROWS) };
+    } while (
+      this.game.snake.some((s) => s.x === entry.x && s.y === entry.y) ||
+      (this.game.food && this.game.food.x === entry.x && this.game.food.y === entry.y) ||
+      this.game.bonusFood.isAt(entry.x, entry.y) ||
+      this.game.walls.isWallAt(entry.x, entry.y)
+    );
+    do {
+      exit = { x: Math.floor(Math.random() * this.game.COLS), y: Math.floor(Math.random() * this.game.ROWS) };
+    } while (
+      (exit.x === entry.x && exit.y === entry.y) ||
+      this.game.snake.some((s) => s.x === exit.x && s.y === exit.y) ||
+      (this.game.food && this.game.food.x === exit.x && this.game.food.y === exit.y) ||
+      this.game.bonusFood.isAt(exit.x, exit.y) ||
+      this.game.walls.isWallAt(exit.x, exit.y) ||
+      Math.abs(exit.x - entry.x) + Math.abs(exit.y - entry.y) < WORMHOLE_MIN_DISTANCE
+    );
+    this.entry = entry;
+    this.exit = exit;
+    this.game.timers.setTimeout(
+      'wormholeLifetime',
+      () => {
+        this.entry = null;
+        this.exit = null;
+        this.game._draw();
+      },
+      WORMHOLE_LIFETIME_MS
+    );
+  }
+
+  tryTeleport(head) {
+    if (!this.enabled || !this.entry) return false;
+    if (head.x === this.entry.x && head.y === this.entry.y) {
+      head.x = this.exit.x;
+      head.y = this.exit.y;
+      this.game.boundary.wrap(head);
+      this.game.timers.clear('wormholeLifetime');
+      this.entry = null;
+      this.exit = null;
+      return true;
+    }
+    return false;
+  }
+
+  draw(ctx, cellSize) {
+    if (!this.enabled || !this.entry) return;
+    ctx.fillStyle = COLOR_WORMHOLE_ENTRY;
+    ctx.fillRect(this.entry.x * cellSize + 1, this.entry.y * cellSize + 1, cellSize - 2, cellSize - 2);
+    ctx.fillStyle = COLOR_WORMHOLE_EXIT;
+    ctx.fillRect(this.exit.x * cellSize + 1, this.exit.y * cellSize + 1, cellSize - 2, cellSize - 2);
+  }
+
+  startTimers() {
+    if (!this.enabled) return;
+    this.game.timers.setInterval(
+      'wormholeTimer',
+      () => {
+        if (!this.entry) {
+          this.trySpawn();
+          this.game._draw();
+        }
+      },
+      WORMHOLE_SPAWN_INTERVAL_MS
+    );
+  }
+}
+
+// ─── BonusFoodManager: enableBonusFood + enableTimedBonusFood + enableShrinkOnBonusFood ──
+
+class BonusFoodManager {
+  constructor(game) {
+    this.game = game;
+    this.pos = null;
+  }
+
+  get enabled() {
+    return this.game.options.enableBonusFood;
+  }
+  get timed() {
+    return this.game.options.enableTimedBonusFood;
+  }
+  get canShrink() {
+    return this.game.options.enableShrinkOnBonusFood;
+  }
+  get active() {
+    return this.pos !== null;
+  }
+
+  isAt(x, y) {
+    return this.pos !== null && this.pos.x === x && this.pos.y === y;
+  }
+
+  place() {
+    if (!this.enabled) return;
+    let pos;
+    do {
+      pos = { x: Math.floor(Math.random() * this.game.COLS), y: Math.floor(Math.random() * this.game.ROWS) };
+    } while (
+      this.game.snake.some((s) => s.x === pos.x && s.y === pos.y) ||
+      (this.game.food && this.game.food.x === pos.x && this.game.food.y === pos.y) ||
+      this.game.walls.isWallAt(pos.x, pos.y)
+    );
+    this.pos = pos;
+    this.game.timers.setInterval('bonusFoodInterval', () => this._move(), this.game.currentSpeed + 60);
+    this.game.timers.setTimeout(
+      'bonusFoodTimeout',
+      () => {
+        this.game.timers.clear('bonusFoodInterval');
+        this.pos = null;
+      },
+      BONUS_FOOD_LIFETIME_MS
+    );
+  }
+
+  _move() {
+    if (!this.pos) return;
+    const dirs = [
+      { x: 0, y: -1 },
+      { x: 0, y: 1 },
+      { x: -1, y: 0 },
+      { x: 1, y: 0 },
+    ];
+    const dir = dirs[Math.floor(Math.random() * dirs.length)];
+    const next = { x: this.pos.x + dir.x, y: this.pos.y + dir.y };
+    const obstacleFree = () =>
+      !this.game.snake.some((s) => s.x === next.x && s.y === next.y) && !this.game.walls.isWallAt(next.x, next.y);
+    if (this.game.boundary.enabled) {
+      this.game.boundary.wrap(next);
+      if (obstacleFree()) {
+        this.pos = next;
+      }
+    } else {
+      if (this.game.boundary.isInBounds(next.x, next.y) && obstacleFree()) {
+        this.pos = next;
+      }
+    }
+    if (this.game.options.mode === MODE_CONSTRICTOR && this.pos && this.game._isFoodEnclosed(this.pos)) {
+      this.game._eatBonusFood();
+    }
+  }
+
+  isHeadCollision(head) {
+    return this.enabled && this.active && head.x === this.pos.x && head.y === this.pos.y;
+  }
+
+  isEnclosed() {
+    return this.enabled && this.active && this.game._isFoodEnclosed(this.pos);
+  }
+
+  onEat() {
+    if (this.canShrink) {
+      const shrunkLen = Math.ceil(this.game.snake.length / 2);
+      if (this.game.options.mode !== MODE_CONSTRICTOR || shrunkLen >= 15) {
+        this.game.snake.splice(shrunkLen);
+      }
+    }
+    this.game.timers.clear('bonusFoodInterval');
+    this.game.timers.clear('bonusFoodTimeout');
+    this.pos = null;
+    return 100;
+  }
+
+  draw(ctx, cellSize) {
+    if (!this.enabled || !this.pos) return;
+    const cx = this.pos.x * cellSize + cellSize / 2;
+    const cy = this.pos.y * cellSize + cellSize / 2;
+    const r = 8;
+    ctx.fillStyle = COLOR_FOOD_BONUS;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - r);
+    ctx.lineTo(cx + r, cy);
+    ctx.lineTo(cx, cy + r);
+    ctx.lineTo(cx - r, cy);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  trySpawnOnCount(foodsEaten) {
+    if (!this.enabled || this.timed) return;
+    if (foodsEaten % 5 === 0 && !this.active) {
+      this.place();
+    }
+  }
+
+  startTimers() {
+    if (!this.enabled || !this.timed) return;
+    this.game.timers.setInterval(
+      'bonusFoodTimer',
+      () => {
+        if (!this.active) this.place();
+      },
+      BONUS_FOOD_SPAWN_INTERVAL_MS
+    );
+  }
+
+  resumeMovementTimers() {
+    if (!this.enabled || !this.active) return;
+    this.game.timers.setInterval('bonusFoodInterval', () => this._move(), this.game.currentSpeed + 60);
+    this.game.timers.setTimeout(
+      'bonusFoodTimeout',
+      () => {
+        this.game.timers.clear('bonusFoodInterval');
+        this.pos = null;
+      },
+      BONUS_FOOD_LIFETIME_MS
+    );
+  }
+
+  clearMovementInterval() {
+    this.game.timers.clear('bonusFoodInterval');
+  }
+
+  clearMovementTimers() {
+    this.game.timers.clear('bonusFoodInterval');
+    this.game.timers.clear('bonusFoodTimeout');
+  }
+
+  clearAllTimers() {
+    this.game.timers.clear('bonusFoodTimer');
+    this.clearMovementTimers();
+  }
+}
+
+// ─── ScoreBonusManager: enableScoreBonus ────────────────────────────────────
+
+class ScoreBonusManager {
+  constructor(game) {
+    this.game = game;
+    this.value = 100;
+  }
+
+  get enabled() {
+    return this.game.options.enableScoreBonus;
+  }
+
+  getHUDHtml() {
+    return this.enabled ? '<span class="snake-bonus">Bonus: 0</span>' : '';
+  }
+
+  onFoodEaten() {
+    if (!this.enabled) return 0;
+    const bonus = this.value > 0 ? this.value : 0;
+    this.value = 100;
+    if (this.game.bonusElement) {
+      this.game.bonusElement.textContent = `Bonus: ${this.value}`;
+    }
+    this.startDecay();
+    return bonus;
+  }
+
+  startDecay() {
+    if (!this.enabled) return;
+    this.game.timers.setInterval(
+      'scoreBonusInterval',
+      () => {
+        this.value = Math.max(0, this.value - 1);
+        this.game.bonusElement.textContent = `Bonus: ${this.value}`;
+        if (this.value === 0) this.game.timers.clear('scoreBonusInterval');
+      },
+      SCORE_BONUS_DECAY_INTERVAL_MS
+    );
+  }
+
+  clearTimers() {
+    this.game.timers.clear('scoreBonusInterval');
+  }
+
+  resumeDecay() {
+    if (this.enabled && this.value > 0) this.startDecay();
+  }
+}
+
+// ─── SpeedManager: enableSpeedUp ────────────────────────────────────────────
+
+class SpeedManager {
+  constructor(game) {
+    this.game = game;
+  }
+
+  get enabled() {
+    return this.game.options.enableSpeedUp;
+  }
+
+  onFoodEaten() {
+    if (!this.enabled || this.game.currentSpeed <= this.game.MIN_SPEED) return;
+    this.game.currentSpeed = Math.max(this.game.MIN_SPEED, this.game.currentSpeed - this.game.SPEED_STEP);
+    this.restartGameLoop();
+  }
+
+  restartGameLoop() {
+    this.game.timers.clear('gameLoop');
+    this.game._scheduleNextTick();
+  }
+}
+
+// ─── InputManager: enableInputBuffer + enableInstantMovement + enableSpeedBoost ──
+
+class InputManager {
+  constructor(game) {
+    this.game = game;
+    this.buffer = [];
+    this.speedBoostActive = false;
+  }
+
+  get enableBuffer() {
+    return this.game.options.enableInputBuffer;
+  }
+  get enableBoost() {
+    return this.game.options.enableSpeedBoost;
+  }
+  get enableInstant() {
+    return this.game.options.enableInstantMovement;
+  }
+
+  commitDirection() {
+    if (this.enableBuffer) {
+      const prevDir = { x: this.game.direction.x, y: this.game.direction.y };
+      let effectiveDir =
+        this.game.graceDirection.x !== 0 || this.game.graceDirection.y !== 0
+          ? { x: this.game.graceDirection.x, y: this.game.graceDirection.y }
+          : { x: this.game.direction.x, y: this.game.direction.y };
+
+      while (this.buffer.length > 0) {
+        const next = this.buffer[0];
+        const isOpposite = next.x === -effectiveDir.x && next.y === -effectiveDir.y;
+        const isSame = next.x === effectiveDir.x && next.y === effectiveDir.y;
+        if (isOpposite || isSame) {
+          this.buffer.shift();
+          continue;
+        }
+        if (this.game.collision.isDirSafe(next)) {
+          this.buffer.shift();
+          effectiveDir = next;
+          break;
+        }
+        break;
+      }
+
+      this.game.direction = effectiveDir;
+      if (prevDir.x !== this.game.direction.x || prevDir.y !== this.game.direction.y) {
+        this._deactivateBoost();
+      }
+      if (this.game.graceDirection.x !== 0 || this.game.graceDirection.y !== 0) {
+        this.game.graceDirection = { x: 0, y: 0 };
+      }
+    } else {
+      this.game.direction = this.game.nextDirection;
+    }
+  }
+
+  handlePlayingInput(dir) {
+    if (this.enableBuffer) {
+      const ref = this.buffer.length > 0 ? this.buffer[this.buffer.length - 1] : this.game.direction;
+      const isOpposite = dir.x === -ref.x && dir.y === -ref.y;
+      const isDuplicate = dir.x === ref.x && dir.y === ref.y;
+      if (!isOpposite && !isDuplicate && this.buffer.length < 2) {
+        this.buffer.push(dir);
+      }
+    }
+    let accepted = false;
+    if (dir.x === this.game.direction.x && dir.y === this.game.direction.y) {
+      const wasActive = this.speedBoostActive;
+      this._activateBoost();
+      accepted = this.enableBoost && !wasActive;
+    } else if (dir.x !== -this.game.direction.x || dir.y !== -this.game.direction.y) {
+      if (!this.enableBuffer) {
+        this.game.nextDirection = dir;
+      }
+      this._deactivateBoost();
+      accepted = true;
+    } else {
+      this._deactivateBoost();
+    }
+
+    if (this.enableInstant && accepted && this.game.state === STATE.PLAYING) {
+      this.game._update();
+      if (this.game.state === STATE.PLAYING) {
+        this.game._scheduleNextTick();
+      }
+    }
+    return accepted;
+  }
+
+  _activateBoost() {
+    if (!this.enableBoost || this.speedBoostActive) return;
+    this.speedBoostActive = true;
+  }
+
+  _deactivateBoost() {
+    if (!this.speedBoostActive) return;
+    this.speedBoostActive = false;
+  }
+
+  resetBoost() {
+    this.speedBoostActive = false;
+  }
+
+  clearBuffer() {
+    this.buffer = [];
+  }
+}
+
+// ─── CollisionResolver: enableGracePeriod + collision detection ─────────────
+
+class CollisionResolver {
+  constructor(game) {
+    this.game = game;
+  }
+
+  get graceEnabled() {
+    return this.game.options.enableGracePeriod;
+  }
+
+  getCollision(pos) {
+    return {
+      wall: this.game.walls.isWallAt(pos.x, pos.y),
+      boundary: pos.x < 0 || pos.x >= this.game.COLS || pos.y < 0 || pos.y >= this.game.ROWS,
+      self: this.game.snake.some((s) => s.x === pos.x && s.y === pos.y),
+    };
+  }
+
+  hasAnySafeMove() {
+    const dirs = [
+      { x: 0, y: -1 },
+      { x: 0, y: 1 },
+      { x: -1, y: 0 },
+      { x: 1, y: 0 },
+    ];
+    for (const dir of dirs) {
+      const pos = this.game.boundary.wrap({ x: this.game.snake[0].x + dir.x, y: this.game.snake[0].y + dir.y });
+      const c = this.getCollision(pos);
+      if (!c.wall && !c.boundary && !c.self) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  isDirSafe(dir) {
+    const pos = this.game.boundary.wrap({ x: this.game.snake[0].x + dir.x, y: this.game.snake[0].y + dir.y });
+    const c = this.getCollision(pos);
+    return !c.wall && !c.boundary && !c.self;
+  }
+
+  resolve(nextHead) {
+    const { wall, boundary, self } = this.getCollision(nextHead);
+    if (wall || boundary || self) {
+      if (this.game.options.mode === MODE_CONSTRICTOR && self) {
+        if (this.hasAnySafeMove()) {
+          this.game._enterIgnored();
+        } else {
+          this.game._gameOver();
+        }
+        return true;
+      }
+      if (this.graceEnabled) {
+        this.game._enterWarning();
+      } else {
+        this.game._gameOver();
+      }
+      return true;
+    }
+    return false;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SnakeGame
+// ═══════════════════════════════════════════════════════════════════════════════
+
 // eslint-disable-next-line no-unused-vars -- accessed from index.html
 class SnakeGame {
   constructor(container, options = {}) {
@@ -318,6 +866,15 @@ class SnakeGame {
     this.SPEED_STEP = 1.68;
     this.TIME_LIMIT = 120000;
 
+    this.walls = new WallsManager(this);
+    this.boundary = new BoundaryManager(this);
+    this.wormholes = new WormholesManager(this);
+    this.bonusFood = new BonusFoodManager(this);
+    this.scoreBonus = new ScoreBonusManager(this);
+    this.input = new InputManager(this);
+    this.speed = new SpeedManager(this);
+    this.collision = new CollisionResolver(this);
+
     this._buildDOM();
     this._bindEvents();
     this.init();
@@ -328,7 +885,7 @@ class SnakeGame {
       <div class="snake-container">
         <div class="snake-hud">
           <span class="snake-score">Score: 0</span>
-          ${this.options.enableScoreBonus ? '<span class="snake-bonus">Bonus: 0</span>' : ''}
+          ${this.scoreBonus.getHUDHtml()}
           <span class="snake-timer">Time: 0:00</span>
         </div>
         <div class="snake-game-wrapper"><canvas class="snake-canvas" width="500" height="500" tabindex="0"></canvas><div class="snake-focus-overlay">Click to focus</div></div>
@@ -386,21 +943,20 @@ class SnakeGame {
     this._transitionTo(STATE.WAITING);
     this.currentSpeed = this.BASE_SPEED;
     this.foodsEaten = 0;
-    this.bonusFood = null;
-    this.scoreBonus = 100;
+    this.scoreBonus.value = 100;
     this.wasPaused = false;
-    this.speedBoostActive = false;
-    this.inputBuffer = [];
+    this.input.speedBoostActive = false;
+    this.input.buffer = [];
     this.graceDirection = { x: 0, y: 0 };
     this.growth = 0;
     this.startGrowth = 0;
     this.warningElapsed = 0;
-    this.wormholeEntry = null;
-    this.wormholeExit = null;
+    this.wormholes.entry = null;
+    this.wormholes.exit = null;
     this.timers = new TimerManager();
     this.freeTiles = this.COLS * this.ROWS;
-    if (this.options.enableWalls) {
-      this.freeTiles -= WALLS.length;
+    if (this.walls.enabled) {
+      this.freeTiles -= this.walls.count;
     }
     this.scoreElement.textContent = 'Score: 0';
     this.timerElement.textContent = this.options.mode === MODE_TIME_TRIAL ? 'Time: 2:00' : 'Time: 0:00';
@@ -423,7 +979,7 @@ class SnakeGame {
       tries++;
     } while (
       this.snake.some((s) => s.x === pos.x && s.y === pos.y) ||
-      (this.options.enableWalls && WALLS.some((w) => w.x === pos.x && w.y === pos.y)) ||
+      this.walls.isWallAt(pos.x, pos.y) ||
       (isConstrictor && tries < maxTries && this._isFoodEnclosed(pos))
     );
     if (isConstrictor && this._isFoodEnclosed(pos)) {
@@ -438,10 +994,7 @@ class SnakeGame {
   _findAnyFreeTile() {
     for (let y = 0; y < this.ROWS; y++) {
       for (let x = 0; x < this.COLS; x++) {
-        if (
-          !this.snake.some((s) => s.x === x && s.y === y) &&
-          !(this.options.enableWalls && WALLS.some((w) => w.x === x && w.y === y))
-        ) {
+        if (!this.snake.some((s) => s.x === x && s.y === y) && !this.walls.isWallAt(x, y)) {
           return { x, y };
         }
       }
@@ -449,144 +1002,12 @@ class SnakeGame {
     return null;
   }
 
-  _placeWormholes() {
-    if (!this.options.enableWormholes) return;
-    if (this.freeTiles - this.snake.length <= WORMHOLE_MIN_FREE_TILES) return;
-    let entry, exit;
-    do {
-      entry = { x: Math.floor(Math.random() * this.COLS), y: Math.floor(Math.random() * this.ROWS) };
-    } while (
-      this.snake.some((s) => s.x === entry.x && s.y === entry.y) ||
-      (this.food && this.food.x === entry.x && this.food.y === entry.y) ||
-      (this.bonusFood && this.bonusFood.x === entry.x && this.bonusFood.y === entry.y) ||
-      (this.options.enableWalls && WALLS.some((w) => w.x === entry.x && w.y === entry.y))
-    );
-    do {
-      exit = { x: Math.floor(Math.random() * this.COLS), y: Math.floor(Math.random() * this.ROWS) };
-    } while (
-      (exit.x === entry.x && exit.y === entry.y) ||
-      this.snake.some((s) => s.x === exit.x && s.y === exit.y) ||
-      (this.food && this.food.x === exit.x && this.food.y === exit.y) ||
-      (this.bonusFood && this.bonusFood.x === exit.x && this.bonusFood.y === exit.y) ||
-      (this.options.enableWalls && WALLS.some((w) => w.x === exit.x && w.y === exit.y)) ||
-      Math.abs(exit.x - entry.x) + Math.abs(exit.y - entry.y) < WORMHOLE_MIN_DISTANCE
-    );
-    this.wormholeEntry = entry;
-    this.wormholeExit = exit;
-    this.timers.setTimeout(
-      'wormholeLifetime',
-      () => {
-        this.wormholeEntry = null;
-        this.wormholeExit = null;
-        this._draw();
-      },
-      WORMHOLE_LIFETIME_MS
-    );
-  }
-
-  _placeBonusFood() {
-    if (!this.options.enableBonusFood) {
-      return;
-    }
-    let pos;
-    do {
-      pos = { x: Math.floor(Math.random() * this.COLS), y: Math.floor(Math.random() * this.ROWS) };
-    } while (
-      this.snake.some((s) => s.x === pos.x && s.y === pos.y) ||
-      (this.food && this.food.x === pos.x && this.food.y === pos.y) ||
-      (this.options.enableWalls && WALLS.some((w) => w.x === pos.x && w.y === pos.y))
-    );
-    this.bonusFood = pos;
-    this.timers.setInterval('bonusFoodInterval', () => this._moveBonusFood(), this.currentSpeed + 60);
-    this.timers.setTimeout(
-      'bonusFoodTimeout',
-      () => {
-        this.timers.clear('bonusFoodInterval');
-        this.bonusFood = null;
-      },
-      BONUS_FOOD_LIFETIME_MS
-    );
-  }
-
-  _startBonusFoodTimer() {
-    if (!this.options.enableTimedBonusFood || !this.options.enableBonusFood) {
-      return;
-    }
-    this.timers.setInterval(
-      'bonusFoodTimer',
-      () => {
-        if (!this.bonusFood) {
-          this._placeBonusFood();
-        }
-      },
-      BONUS_FOOD_SPAWN_INTERVAL_MS
-    );
-  }
-
-  _startWormholeTimer() {
-    if (!this.options.enableWormholes) return;
-    this.timers.setInterval(
-      'wormholeTimer',
-      () => {
-        if (!this.wormholeEntry) {
-          this._placeWormholes();
-          this._draw();
-        }
-      },
-      WORMHOLE_SPAWN_INTERVAL_MS
-    );
-  }
-
-  _moveBonusFood() {
-    if (!this.bonusFood) {
-      return;
-    }
-    const dirs = [
-      { x: 0, y: -1 },
-      { x: 0, y: 1 },
-      { x: -1, y: 0 },
-      { x: 1, y: 0 },
-    ];
-    const dir = dirs[Math.floor(Math.random() * dirs.length)];
-    const next = { x: this.bonusFood.x + dir.x, y: this.bonusFood.y + dir.y };
-    const obstacleFree = () =>
-      !this.snake.some((s) => s.x === next.x && s.y === next.y) &&
-      !(this.options.enableWalls && WALLS.some((w) => w.x === next.x && w.y === next.y));
-    if (this.options.enableWrap) {
-      this._wrapPos(next);
-      if (obstacleFree()) {
-        this.bonusFood = next;
-      }
-    } else {
-      if (next.x >= 0 && next.x < this.COLS && next.y >= 0 && next.y < this.ROWS && obstacleFree()) {
-        this.bonusFood = next;
-      }
-    }
-    if (this.options.mode === MODE_CONSTRICTOR && this.bonusFood && this._isFoodEnclosed(this.bonusFood)) {
-      this._eatBonusFood();
-    }
-  }
-
-  _startBonusDecay() {
-    this.timers.setInterval(
-      'scoreBonusInterval',
-      () => {
-        this.scoreBonus = Math.max(0, this.scoreBonus - 1);
-        this.bonusElement.textContent = `Bonus: ${this.scoreBonus}`;
-        if (this.scoreBonus === 0) {
-          this.timers.clear('scoreBonusInterval');
-        }
-      },
-      SCORE_BONUS_DECAY_INTERVAL_MS
-    );
-  }
-
   _isFoodEnclosed(pos) {
     const key = (x, y) => `${x},${y}`;
     const snakeSet = new Set(this.snake.map((s) => key(s.x, s.y)));
-    const wallSet = this.options.enableWalls ? new Set(WALLS.map((w) => key(w.x, w.y))) : new Set();
+    const wallSet = this.walls.getWallSet();
     const isBlocked = (x, y) => snakeSet.has(key(x, y)) || wallSet.has(key(x, y));
-    const wrap = this.options.enableWrap;
+    const wrap = this.boundary.enabled;
 
     const floodSize = (sx, sy, visited) => {
       let size = 0;
@@ -649,57 +1070,8 @@ class SnakeGame {
     return foodSize < largestOther;
   }
 
-  _wrapPos(pos) {
-    if (this.options.enableWrap) {
-      pos.x = (pos.x + this.COLS) % this.COLS;
-      pos.y = (pos.y + this.ROWS) % this.ROWS;
-    }
-    return pos;
-  }
-
-  _getCollision(pos) {
-    return {
-      wall: this.options.enableWalls && WALLS.some((w) => w.x === pos.x && w.y === pos.y),
-      boundary: pos.x < 0 || pos.x >= this.COLS || pos.y < 0 || pos.y >= this.ROWS,
-      self: this.snake.some((s) => s.x === pos.x && s.y === pos.y),
-    };
-  }
-
-  _hasAnySafeMove() {
-    const dirs = [
-      { x: 0, y: -1 },
-      { x: 0, y: 1 },
-      { x: -1, y: 0 },
-      { x: 1, y: 0 },
-    ];
-    for (const dir of dirs) {
-      const pos = this._wrapPos({ x: this.snake[0].x + dir.x, y: this.snake[0].y + dir.y });
-      const c = this._getCollision(pos);
-      if (!c.wall && !c.boundary && !c.self) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  _isDirSafe(dir) {
-    const pos = this._wrapPos({ x: this.snake[0].x + dir.x, y: this.snake[0].y + dir.y });
-    const c = this._getCollision(pos);
-    return !c.wall && !c.boundary && !c.self;
-  }
-
   _eatRegularFood() {
-    let points = 10;
-    if (this.options.enableScoreBonus) {
-      if (this.scoreBonus > 0) {
-        points += this.scoreBonus;
-      }
-      this.scoreBonus = 100;
-      if (this.bonusElement) {
-        this.bonusElement.textContent = `Bonus: ${this.scoreBonus}`;
-      }
-      this._startBonusDecay();
-    }
+    const points = 10 + this.scoreBonus.onFoodEaten();
     this.score += points;
     this.scoreElement.textContent = `Score: ${this.score}`;
     this.foodsEaten++;
@@ -708,37 +1080,14 @@ class SnakeGame {
       this._gameOver();
       return;
     }
-    if (
-      this.options.enableBonusFood &&
-      !this.options.enableTimedBonusFood &&
-      this.foodsEaten % 5 === 0 &&
-      !this.bonusFood
-    ) {
-      this._placeBonusFood();
-    }
+    this.bonusFood.trySpawnOnCount(this.foodsEaten);
     this._placeFood();
-    if (this.options.enableSpeedUp && this.currentSpeed > this.MIN_SPEED) {
-      this.currentSpeed = Math.max(this.MIN_SPEED, this.currentSpeed - this.SPEED_STEP);
-      this.timers.setInterval(
-        'gameLoop',
-        () => this._update(),
-        this.speedBoostActive ? this.currentSpeed / SPEED_BOOST_FACTOR : this.currentSpeed
-      );
-    }
+    this.speed.onFoodEaten();
   }
 
   _eatBonusFood() {
-    this.score += 100;
+    this.score += this.bonusFood.onEat();
     this.scoreElement.textContent = `Score: ${this.score}`;
-    if (this.options.enableShrinkOnBonusFood) {
-      const shrunkLen = Math.ceil(this.snake.length / 2);
-      if (this.options.mode !== MODE_CONSTRICTOR || shrunkLen >= 15) {
-        this.snake.splice(shrunkLen);
-      }
-    }
-    this.timers.clear('bonusFoodInterval');
-    this.timers.clear('bonusFoodTimeout');
-    this.bonusFood = null;
   }
 
   _updateTimerDisplay() {
@@ -760,39 +1109,12 @@ class SnakeGame {
     this.ctx.fillStyle = COLOR_BG;
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-    if (this.options.enableWalls) {
-      WALLS.forEach((w) => {
-        this.ctx.fillStyle = COLOR_WALL_BODY;
-        this.ctx.fillRect(w.x * this.CELL_SIZE, w.y * this.CELL_SIZE, this.CELL_SIZE, this.CELL_SIZE);
-        this.ctx.fillStyle = COLOR_WALL_EDGE_LIGHT;
-        this.ctx.fillRect(w.x * this.CELL_SIZE, w.y * this.CELL_SIZE, this.CELL_SIZE - 1, 1);
-        this.ctx.fillRect(w.x * this.CELL_SIZE, w.y * this.CELL_SIZE, 1, this.CELL_SIZE - 1);
-        this.ctx.fillStyle = COLOR_WALL_EDGE_DARK;
-        this.ctx.fillRect((w.x + 1) * this.CELL_SIZE - 1, w.y * this.CELL_SIZE, 1, this.CELL_SIZE);
-        this.ctx.fillRect(w.x * this.CELL_SIZE, (w.y + 1) * this.CELL_SIZE - 1, this.CELL_SIZE, 1);
-      });
-    }
-
-    if (this.options.enableWormholes && this.wormholeEntry) {
-      this.ctx.fillStyle = COLOR_WORMHOLE_ENTRY;
-      this.ctx.fillRect(
-        this.wormholeEntry.x * this.CELL_SIZE + 1,
-        this.wormholeEntry.y * this.CELL_SIZE + 1,
-        this.CELL_SIZE - 2,
-        this.CELL_SIZE - 2
-      );
-      this.ctx.fillStyle = COLOR_WORMHOLE_EXIT;
-      this.ctx.fillRect(
-        this.wormholeExit.x * this.CELL_SIZE + 1,
-        this.wormholeExit.y * this.CELL_SIZE + 1,
-        this.CELL_SIZE - 2,
-        this.CELL_SIZE - 2
-      );
-    }
+    this.walls.draw(this.ctx, this.CELL_SIZE);
+    this.wormholes.draw(this.ctx, this.CELL_SIZE);
 
     this.snake.forEach((seg, i) => {
       let key = this._getSegmentTileKey(i);
-      if (i === 0 && this.speedBoostActive) {
+      if (i === 0 && this.input.speedBoostActive) {
         key += '_b';
       } else if (this.state === STATE.IGNORED) {
         key += '_i';
@@ -816,19 +1138,7 @@ class SnakeGame {
       this.CELL_SIZE - 2
     );
 
-    if (this.options.enableBonusFood && this.bonusFood) {
-      const cx = this.bonusFood.x * this.CELL_SIZE + this.CELL_SIZE / 2;
-      const cy = this.bonusFood.y * this.CELL_SIZE + this.CELL_SIZE / 2;
-      const r = 8;
-      this.ctx.fillStyle = COLOR_FOOD_BONUS;
-      this.ctx.beginPath();
-      this.ctx.moveTo(cx, cy - r);
-      this.ctx.lineTo(cx + r, cy);
-      this.ctx.lineTo(cx, cy + r);
-      this.ctx.lineTo(cx - r, cy);
-      this.ctx.closePath();
-      this.ctx.fill();
-    }
+    this.bonusFood.draw(this.ctx, this.CELL_SIZE);
 
     if (this.state === STATE.OVER) {
       this.ctx.fillStyle = COLOR_OVERLAY;
@@ -887,7 +1197,7 @@ class SnakeGame {
 
     const prev = this.snake[i - 1];
     const curr = this.snake[i];
-    const dirIn = dirBetween(prev, curr, this.options.enableWrap);
+    const dirIn = this.boundary.dirBetween(prev, curr);
 
     if (i === this.snake.length - 1) {
       const key = DIR_KEY[`${dirIn.x},${dirIn.y}`];
@@ -896,7 +1206,7 @@ class SnakeGame {
     }
 
     const next = this.snake[i + 1];
-    const dirOut = dirBetween(curr, next, this.options.enableWrap);
+    const dirOut = this.boundary.dirBetween(curr, next);
 
     const inCardinal = DIR_KEY[`${dirIn.x},${dirIn.y}`] !== undefined;
     const outCardinal = DIR_KEY[`${dirOut.x},${dirOut.y}`] !== undefined;
@@ -915,86 +1225,18 @@ class SnakeGame {
   }
 
   _processInput() {
-    if (this.options.enableInputBuffer) {
-      const prevDir = { x: this.direction.x, y: this.direction.y };
-      let effectiveDir =
-        this.graceDirection.x !== 0 || this.graceDirection.y !== 0 ? this.graceDirection : this.direction;
-
-      while (this.inputBuffer.length > 0) {
-        const next = this.inputBuffer[0];
-        const isOpposite = next.x === -effectiveDir.x && next.y === -effectiveDir.y;
-        const isSame = next.x === effectiveDir.x && next.y === effectiveDir.y;
-
-        if (isOpposite || isSame) {
-          this.inputBuffer.shift();
-          continue;
-        }
-
-        if (this._isDirSafe(next)) {
-          this.inputBuffer.shift();
-          effectiveDir = next;
-          break;
-        }
-
-        break;
-      }
-
-      this.direction = effectiveDir;
-      if (prevDir.x !== this.direction.x || prevDir.y !== this.direction.y) {
-        this._deactivateSpeedBoost();
-      }
-
-      if (this.graceDirection.x !== 0 || this.graceDirection.y !== 0) {
-        this.graceDirection = { x: 0, y: 0 };
-      }
-    } else {
-      this.direction = this.nextDirection;
-    }
+    this.input.commitDirection();
   }
 
   _resolveNextHead() {
     const nextHead = { x: this.snake[0].x + this.direction.x, y: this.snake[0].y + this.direction.y };
-
-    if (this.options.enableWrap) this._wrapPos(nextHead);
-
-    if (
-      this.options.enableWormholes &&
-      this.wormholeEntry &&
-      nextHead.x === this.wormholeEntry.x &&
-      nextHead.y === this.wormholeEntry.y
-    ) {
-      nextHead.x = this.wormholeExit.x;
-      nextHead.y = this.wormholeExit.y;
-      if (this.options.enableWrap) this._wrapPos(nextHead);
-      this.timers.clear('wormholeLifetime');
-      this.wormholeEntry = null;
-      this.wormholeExit = null;
-    }
-
+    this.boundary.wrap(nextHead);
+    this.wormholes.tryTeleport(nextHead);
     return nextHead;
   }
 
   _processCollision(nextHead) {
-    const { wall, boundary, self } = this._getCollision(nextHead);
-
-    if (wall || boundary || self) {
-      if (this.options.mode === MODE_CONSTRICTOR && self) {
-        if (this._hasAnySafeMove()) {
-          this._enterIgnored();
-        } else {
-          this._gameOver();
-        }
-        return true;
-      }
-      if (this.options.enableGracePeriod) {
-        this._enterWarning();
-      } else {
-        this._gameOver();
-      }
-      return true;
-    }
-
-    return false;
+    return this.collision.resolve(nextHead);
   }
 
   _processConstrictorTurn(head) {
@@ -1019,7 +1261,7 @@ class SnakeGame {
       if (this.state === STATE.OVER) return;
     }
 
-    if (this.options.enableBonusFood && this.bonusFood && this._isFoodEnclosed(this.bonusFood)) {
+    if (this.bonusFood.isEnclosed()) {
       this._eatBonusFood();
     }
   }
@@ -1036,7 +1278,7 @@ class SnakeGame {
       }
     }
 
-    if (this.options.enableBonusFood && this.bonusFood && head.x === this.bonusFood.x && head.y === this.bonusFood.y) {
+    if (this.bonusFood.isHeadCollision(head)) {
       this._eatBonusFood();
     }
   }
@@ -1057,6 +1299,20 @@ class SnakeGame {
     this._draw();
   }
 
+  _scheduleNextTick() {
+    const delay = this.input.speedBoostActive ? this.currentSpeed / SPEED_BOOST_FACTOR : this.currentSpeed;
+    this.timers.setTimeout(
+      'gameLoop',
+      () => {
+        this._update();
+        if (this.state === STATE.PLAYING) {
+          this._scheduleNextTick();
+        }
+      },
+      delay
+    );
+  }
+
   _transitionTo(newState) {
     if (this.state === newState) return;
     const valid = STATE_TRANSITIONS[this.state];
@@ -1068,7 +1324,7 @@ class SnakeGame {
 
   _enterWarning() {
     this.timers.clear('gameLoop');
-    this.timers.clear('bonusFoodInterval');
+    this.bonusFood.clearMovementInterval();
     this._transitionTo(STATE.WARNING);
     this.warningStart = Date.now();
     this.warningElapsed = 0;
@@ -1078,19 +1334,18 @@ class SnakeGame {
     this.timers.setTimeout(
       'warningTimeout',
       () => this._gameOver(),
-      this.speedBoostActive ? WARNING_TIMEOUT_MS / SPEED_BOOST_FACTOR : WARNING_TIMEOUT_MS
+      this.input.speedBoostActive ? WARNING_TIMEOUT_MS / SPEED_BOOST_FACTOR : WARNING_TIMEOUT_MS
     );
   }
 
   _enterIgnored() {
     this.timers.clear('gameLoop');
-    this.timers.clear('bonusFoodInterval');
-    this.timers.clear('bonusFoodTimeout');
-    this.timers.clear('scoreBonusInterval');
-    this._deactivateSpeedBoost();
+    this.bonusFood.clearAllTimers();
+    this.scoreBonus.clearTimers();
+    this.input.resetBoost();
     this._transitionTo(STATE.IGNORED);
-    this.inputBuffer = [];
-    this.messageElement.textContent = 'Snake stuck — press a safe direction';
+    this.input.clearBuffer();
+    this.messageElement.textContent = 'Snake stuck \u2014 press a safe direction';
     this._draw();
   }
 
@@ -1102,17 +1357,11 @@ class SnakeGame {
     if (this.options.mode === MODE_CONSTRICTOR) {
       this.startGrowth = 14;
     }
-    this.timers.setInterval('gameLoop', () => this._update(), this.currentSpeed);
+    this.speed.restartGameLoop();
     this.timers.setInterval('timerInterval', () => this._updateTimerDisplay(), 1000);
-    if (this.options.enableScoreBonus && this.scoreBonus > 0) {
-      this._startBonusDecay();
-    }
-    if (this.options.enableTimedBonusFood) {
-      this._startBonusFoodTimer();
-    }
-    if (this.options.enableWormholes) {
-      this._startWormholeTimer();
-    }
+    this.scoreBonus.resumeDecay();
+    this.bonusFood.startTimers();
+    this.wormholes.startTimers();
   }
 
   _gameOver() {
@@ -1123,56 +1372,29 @@ class SnakeGame {
   }
 
   _pauseGame() {
-    if (this.state !== STATE.PLAYING && this.state !== STATE.WARNING && this.state !== STATE.IGNORED) {
-      return;
-    }
+    if (this.state !== STATE.PLAYING && this.state !== STATE.WARNING && this.state !== STATE.IGNORED) return;
     this.wasPaused = true;
     this._clearAllTimers();
     if (this.state === STATE.WARNING) {
       this.warningElapsed = Date.now() - this.warningStart;
     }
-    this.overlay.textContent = 'Paused — Click to resume';
-  }
-
-  _resumeCommonTimers() {
-    if (this.options.enableBonusFood && this.bonusFood) {
-      this.timers.setInterval('bonusFoodInterval', () => this._moveBonusFood(), this.currentSpeed + 60);
-      this.timers.setTimeout(
-        'bonusFoodTimeout',
-        () => {
-          this.timers.clear('bonusFoodInterval');
-          this.bonusFood = null;
-        },
-        BONUS_FOOD_LIFETIME_MS
-      );
-    }
-    if (this.options.enableScoreBonus && this.scoreBonus > 0) {
-      this._startBonusDecay();
-    }
+    this.overlay.textContent = 'Paused \u2014 Click to resume';
   }
 
   _resumeGame() {
-    if (!this.wasPaused) {
-      return;
-    }
+    if (!this.wasPaused) return;
     this.wasPaused = false;
     if (this.state === STATE.PLAYING) {
       this.startTime = Date.now() - this.elapsed;
-      this.timers.setInterval(
-        'gameLoop',
-        () => this._update(),
-        this.speedBoostActive ? this.currentSpeed / SPEED_BOOST_FACTOR : this.currentSpeed
-      );
+      this.speed.restartGameLoop();
       this.timers.setInterval('timerInterval', () => this._updateTimerDisplay(), 1000);
       this._resumeCommonTimers();
-      if (this.options.enableTimedBonusFood) {
-        this._startBonusFoodTimer();
-      }
-      if (this.options.enableWormholes) {
-        this._startWormholeTimer();
-      }
+      this.bonusFood.startTimers();
+      this.wormholes.startTimers();
     } else if (this.state === STATE.WARNING) {
-      const warningDuration = this.speedBoostActive ? WARNING_TIMEOUT_MS / SPEED_BOOST_FACTOR : WARNING_TIMEOUT_MS;
+      const warningDuration = this.input.speedBoostActive
+        ? WARNING_TIMEOUT_MS / SPEED_BOOST_FACTOR
+        : WARNING_TIMEOUT_MS;
       this.timers.setTimeout(
         'warningTimeout',
         () => this._gameOver(),
@@ -1181,30 +1403,15 @@ class SnakeGame {
       this._resumeCommonTimers();
     } else if (this.state === STATE.IGNORED) {
       this._resumeCommonTimers();
-      if (this.options.enableTimedBonusFood) {
-        this._startBonusFoodTimer();
-      }
-      if (this.options.enableWormholes) {
-        this._startWormholeTimer();
-      }
+      this.bonusFood.startTimers();
+      this.wormholes.startTimers();
     }
     this.overlay.textContent = 'Click to focus';
   }
 
-  _activateSpeedBoost() {
-    if (!this.options.enableSpeedBoost || this.speedBoostActive) {
-      return;
-    }
-    this.speedBoostActive = true;
-    this.timers.setInterval('gameLoop', () => this._update(), this.currentSpeed / SPEED_BOOST_FACTOR);
-  }
-
-  _deactivateSpeedBoost() {
-    if (!this.speedBoostActive) {
-      return;
-    }
-    this.speedBoostActive = false;
-    this.timers.setInterval('gameLoop', () => this._update(), this.currentSpeed);
+  _resumeCommonTimers() {
+    this.bonusFood.resumeMovementTimers();
+    this.scoreBonus.resumeDecay();
   }
 
   _handleKeydown(e) {
@@ -1226,9 +1433,7 @@ class SnakeGame {
     };
 
     const newDir = keyMap[e.key];
-    if (!newDir) {
-      return;
-    }
+    if (!newDir) return;
     e.preventDefault();
 
     switch (this.state) {
@@ -1254,80 +1459,34 @@ class SnakeGame {
   }
 
   _handleInputWarning(dir) {
-    const newHead = this._wrapPos({ x: this.snake[0].x + dir.x, y: this.snake[0].y + dir.y });
-    const { wall, boundary, self } = this._getCollision(newHead);
-    if (wall || boundary || self) {
-      return;
-    }
+    const newHead = this.boundary.wrap({ x: this.snake[0].x + dir.x, y: this.snake[0].y + dir.y });
+    const c = this.collision.getCollision(newHead);
+    if (c.wall || c.boundary || c.self) return;
     this.timers.clear('warningTimeout');
     this.direction = dir;
     this.nextDirection = dir;
     this.graceDirection = { x: 0, y: 0 };
     this._transitionTo(STATE.PLAYING);
     this.messageElement.textContent = '';
-    this.speedBoostActive = false;
-    this.timers.setInterval('gameLoop', () => this._update(), this.currentSpeed);
-    if (this.options.enableBonusFood && this.bonusFood) {
-      this.timers.setInterval('bonusFoodInterval', () => this._moveBonusFood(), this.currentSpeed + 60);
-      this.timers.setTimeout(
-        'bonusFoodTimeout',
-        () => {
-          this.timers.clear('bonusFoodInterval');
-          this.bonusFood = null;
-        },
-        BONUS_FOOD_LIFETIME_MS
-      );
-    }
+    this.input.resetBoost();
+    this._scheduleNextTick();
+    this.bonusFood.resumeMovementTimers();
   }
 
   _handleInputIgnored(dir) {
-    const newHead = this._wrapPos({ x: this.snake[0].x + dir.x, y: this.snake[0].y + dir.y });
-    const { wall, boundary, self } = this._getCollision(newHead);
-    if (wall || boundary || self) {
-      return;
-    }
-    this.inputBuffer = [];
+    const newHead = this.boundary.wrap({ x: this.snake[0].x + dir.x, y: this.snake[0].y + dir.y });
+    const c = this.collision.getCollision(newHead);
+    if (c.wall || c.boundary || c.self) return;
+    this.input.clearBuffer();
     this.direction = dir;
     this.nextDirection = dir;
     this._transitionTo(STATE.PLAYING);
     this.messageElement.textContent = '';
-    this.timers.setInterval('gameLoop', () => this._update(), this.currentSpeed);
+    this._scheduleNextTick();
     this._resumeCommonTimers();
   }
 
   _handleInputPlaying(dir) {
-    if (this.options.enableInputBuffer) {
-      const ref = this.inputBuffer.length > 0 ? this.inputBuffer[this.inputBuffer.length - 1] : this.direction;
-      const isOpposite = dir.x === -ref.x && dir.y === -ref.y;
-      const isDuplicate = dir.x === ref.x && dir.y === ref.y;
-      if (!isOpposite && !isDuplicate && this.inputBuffer.length < 2) {
-        this.inputBuffer.push(dir);
-      }
-    }
-    let acceptedInput = false;
-    if (dir.x === this.direction.x && dir.y === this.direction.y) {
-      const wasActive = this.speedBoostActive;
-      this._activateSpeedBoost();
-      acceptedInput = this.options.enableSpeedBoost && !wasActive;
-    } else if (dir.x !== -this.direction.x || dir.y !== -this.direction.y) {
-      if (!this.options.enableInputBuffer) {
-        this.nextDirection = dir;
-      }
-      this._deactivateSpeedBoost();
-      acceptedInput = true;
-    } else {
-      this._deactivateSpeedBoost();
-    }
-
-    if (this.options.enableInstantMovement && acceptedInput && this.state === STATE.PLAYING) {
-      this._update();
-      if (this.state === STATE.PLAYING) {
-        this.timers.setInterval(
-          'gameLoop',
-          () => this._update(),
-          this.speedBoostActive ? this.currentSpeed / SPEED_BOOST_FACTOR : this.currentSpeed
-        );
-      }
-    }
+    this.input.handlePlayingInput(dir);
   }
 }
