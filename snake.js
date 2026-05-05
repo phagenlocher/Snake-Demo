@@ -1800,6 +1800,7 @@ class SnakeGame {
     const valid = STATE_TRANSITIONS[this.state];
     if (valid && !valid.includes(newState)) {
       console.warn(`Invalid state transition: ${this.state} -> ${newState}`);
+      return;
     }
     this.state = newState;
   }
