@@ -924,10 +924,8 @@ class SnakeGame {
       while (this.inputBuffer.length > 0) {
         const next = this.inputBuffer.shift();
         if (next.x !== -effectiveDir.x || next.y !== -effectiveDir.y) {
-          if (this._isDirSafe(next)) {
-            effectiveDir = next;
-            break;
-          }
+          effectiveDir = next;
+          break;
         }
       }
 
