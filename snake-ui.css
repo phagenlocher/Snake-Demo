@@ -1,5 +1,5 @@
 /*
-Snake Demo - A Snake game with togglable features to demonstrate game design
+Snake Demo - Page shell, mode selector, and feature toggle styles
 Written in 2026 by Philipp Hagenlocher <me@philipphagenlocher.de>
 This software was written with the assistance of AI.
 
@@ -20,52 +20,6 @@ body {
   height: 100vh;
   font-family: 'Courier New', monospace;
   color: #4a7a4a;
-}
-.snake-container {
-  text-align: center;
-  width: 510px;
-}
-.snake-hud {
-  display: flex;
-  justify-content: space-between;
-  padding: 10px 6px;
-  font-size: 22px;
-  font-weight: bold;
-  letter-spacing: 1px;
-}
-.snake-hud .snake-bonus {
-  color: #ffd700;
-}
-.snake-canvas {
-  display: block;
-  background: #0d1a0d;
-  outline: none;
-}
-.snake-game-wrapper {
-  position: relative;
-  display: inline-block;
-  border: 5px solid #4a7a4a;
-}
-.snake-focus-overlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.55);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  z-index: 10;
-  color: #4a7a4a;
-  font-size: 22px;
-  letter-spacing: 1px;
-}
-.snake-focus-overlay.snake-hidden {
-  display: none;
-}
-.snake-message {
-  margin-top: 16px;
-  font-size: 20px;
-  height: 28px;
 }
 .snake-toggles {
   margin-bottom: 12px;
