@@ -922,11 +922,22 @@ class SnakeGame {
         this.graceDirection.x !== 0 || this.graceDirection.y !== 0 ? this.graceDirection : this.direction;
 
       while (this.inputBuffer.length > 0) {
-        const next = this.inputBuffer.shift();
-        if (next.x !== -effectiveDir.x || next.y !== -effectiveDir.y) {
+        const next = this.inputBuffer[0];
+        const isOpposite = next.x === -effectiveDir.x && next.y === -effectiveDir.y;
+        const isSame = next.x === effectiveDir.x && next.y === effectiveDir.y;
+
+        if (isOpposite || isSame) {
+          this.inputBuffer.shift();
+          continue;
+        }
+
+        if (this._isDirSafe(next)) {
+          this.inputBuffer.shift();
           effectiveDir = next;
           break;
         }
+
+        break;
       }
 
       this.direction = effectiveDir;
