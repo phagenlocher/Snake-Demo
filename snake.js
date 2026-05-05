@@ -1018,8 +1018,10 @@ class InputManager {
       this._deactivateBoost();
     }
 
-    if (this.enableInstant && accepted && this.game.state === STATE.PLAYING) {
-      this.game._update();
+    if (accepted && this.game.state === STATE.PLAYING) {
+      if (this.enableInstant) {
+        this.game._update();
+      }
       if (this.game.state === STATE.PLAYING) {
         this.game._scheduleNextTick();
       }
