@@ -653,8 +653,10 @@ class SpeedManager {
   }
 
   onFoodEaten() {
-    if (!this.enabled || this.game.currentSpeed <= this.game.MIN_SPEED) return;
-    this.game.currentSpeed = Math.max(this.game.MIN_SPEED, this.game.currentSpeed - this.game.SPEED_STEP);
+    if (!this.enabled) return;
+    const baseTickRate = 1000 / this.game.BASE_SPEED;
+    const tickRate = baseTickRate + this.game.RATE_STEP * this.game.foodsEaten;
+    this.game.currentSpeed = Math.max(this.game.MIN_SPEED, 1000 / tickRate);
     this.restartGameLoop();
   }
 
@@ -863,7 +865,7 @@ class SnakeGame {
     this.ROWS = 20;
     this.BASE_SPEED = 135;
     this.MIN_SPEED = 50;
-    this.SPEED_STEP = 1.68;
+    this.RATE_STEP = 0.2;
     this.TIME_LIMIT = 120000;
 
     this.walls = new WallsManager(this);
