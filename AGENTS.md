@@ -437,8 +437,8 @@ Tiles are pre-rendered off-screen canvases that must render correctly across var
 ### Architecture
 
 - **Tile canvases**: Always **26×26 pixels** (`_makeTile`, `snake.js:2066`). The 19 `TILE_RENDERERS` functions use hardcoded 26px coordinates — tiles are rendered at their native resolution regardless of `CELL_SIZE`.
-- **Main canvas draw**: `ctx.drawImage(tile, x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE)` — scales the 26×26 tile to `CELL_SIZE × CELL_SIZE` destination pixels.
-- **Nearest-neighbor scaling**: `ctx.imageSmoothingEnabled = false` is set in `_draw()` (`snake.js:1941`) before any `drawImage` call. This disables bilinear filtering, preventing anti-aliased blending at tile boundaries that would otherwise create visible "streaks" between adjacent cells.
+- **Main canvas draw**: `ctx.drawImage(tile, x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE)` — scales the 26×26 tile to `CELL_SIZE × CELL_SIZE` destination pixels with default bilinear filtering. Because tiles are rendered at 26×26 with clean integer coordinates (no internal anti-aliasing), bilinear interpolation at tile boundaries produces smooth results without visible streaks.
+- **No `imageSmoothingEnabled` override**: The default `true` (bilinear) is used. It was briefly set to `false` (nearest-neighbor) to work around a separate `ctx.scale()` issue, but that was reversed once the root cause was fixed.
 
 ### Why Not `ctx.scale()` Inside Tiles?
 
@@ -448,11 +448,11 @@ A previous approach used `ctx.scale(CELL_SIZE/26, CELL_SIZE/26)` inside `_makeTi
 2. **Anti-aliased edges within tiles** — fractional coordinates trigger canvas anti-aliasing.
 3. **Visible streaks at seams** — when adjacent tiles are drawn side by side, their anti-aliased edge pixels blend, creating visible lines between cells.
 
-The current approach renders tiles once at 26×26 with clean integer coordinates, then scales the finished tile image via nearest-neighbor. No internal anti-aliasing, no streaks.
+The current approach renders tiles once at 26×26 with clean integer coordinates, then scales the finished tile image via default bilinear filtering. Because the tile content is internally crisp, the bilinear filtering at boundaries blends cleanly between adjacent tiles without visible streaks.
 
 ### Tradeoff
 
-At smaller `CELL_SIZE` values, nearest-neighbor downscaling from 26px drops pixels (e.g., 26→20 drops 6px). Shapes retain their character but lose fine detail. This is acceptable and standard for pixel-art game rendering.
+At smaller `CELL_SIZE` values, bilinear downscaling from 26px produces smoothly interpolated results. Shapes retain their character but soften slightly — a standard tradeoff for dynamically-sized sprite rendering.
 
 ## Responsive Layout (< 510px)
 

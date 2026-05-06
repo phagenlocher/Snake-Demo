@@ -1938,7 +1938,6 @@ class SnakeGame {
   _draw() {
     this.ctx.fillStyle = this.colors.bg;
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-    this.ctx.imageSmoothingEnabled = false;
 
     if (this.walls.enabled) {
       WALLS.forEach((w) => {
