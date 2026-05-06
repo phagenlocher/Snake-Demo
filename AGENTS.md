@@ -50,9 +50,11 @@ Food is eaten by enclosure, not head collision.
 
 ## Togglable Features
 
-All features are controlled via checkboxes in `index.html` and passed as options to `SnakeGame(container, options)`. The game is destroyed and remounted whenever any toggle changes.
+All features are controlled via checkboxes in `index.html` and passed as options to `SnakeGame(container, options)`. The game is destroyed and remounted whenever any toggle changes. All features default to `true` (enabled).
 
-### `enableBonusFood` (default: `true`)
+### Bonuses and Score
+
+#### `enableBonusFood`
 
 Enables the golden diamond bonus food mechanic.
 
@@ -64,7 +66,39 @@ Enables the golden diamond bonus food mechanic.
 - **Points**: Worth 100 points when eaten.
 - **When disabled**: No bonus food ever spawns; `_placeBonusFood()` returns early; bonus food rendering, movement, and collision checks are all skipped.
 
-### `enableGracePeriod` (default: `true`)
+#### `enableTimedBonusFood`
+
+Replaces the food-count-based bonus food spawn with a time-based trigger.
+
+- **Mechanism**: A `setInterval` fires every 15 000 ms. If no bonus food is currently on the board, `_placeBonusFood()` is called.
+- **Dependency**: Requires `enableBonusFood` to also be enabled; otherwise does nothing.
+- **Replacement behavior**: When this option is on, the `foodsEaten % 5 === 0` trigger in `_update()` is bypassed entirely — bonus food spawns _only_ from the 15-second timer.
+- **Pause/resume**: Timer is cleared on pause (via `_clearAllTimers()`) and restarted fresh on resume via `_startBonusFoodTimer()`.
+- **When disabled**: Bonus food spawns via the original food-count mechanic (every 5 regular foods eaten).
+
+#### `enableShrinkOnBonusFood`
+
+Controls whether the snake shrinks when eating bonus food.
+
+- **Behavior**: When bonus food is eaten, the snake's length is halved via `this.snake.splice(Math.ceil(this.snake.length / 2))`, removing the tail half. Any pending `growth` counter is unaffected (the snake will still grow by remaining ticks if `growth > 0`). In constrictor mode, shrinking is capped at a minimum length of 15.
+- **Dependency**: Only has effect when `enableBonusFood` is also enabled and mode is not `constrictor` (bonus food must exist to be eaten).
+- **When disabled**: Eating bonus food still awards 100 points and clears the bonus food, but the snake retains its full length.
+
+#### `enableScoreBonus`
+
+Enables a decaying bonus score multiplier displayed in the HUD as `Bonus: N`.
+
+- **Initial value**: Starts at 100 points each game and after each regular food eaten.
+- **Decay**: Decreases by 1 point every 200ms (5 points per second) via `setInterval`, bottoming out at 0. The HUD updates live (`Bonus: N`).
+- **Application**: When regular food is eaten, if `scoreBonus > 0`, the current bonus value is added to the score **in addition to** the base 10 points.
+- **Reset**: After eating regular food, `scoreBonus` resets to 100 and a new decay interval starts.
+- **HUD**: Shown as `<span class="bonus">Bonus: 100</span>` in the HUD bar between Score and Time.
+- **Pause/resume**: Decay timer is cleared on pause and restarted on resume (remaining decay continues from where it left off, but the value itself is not adjusted for elapsed pause time).
+- **When disabled**: No bonus score is ever added; the bonus HUD element still renders but never changes from its initial value display; decay interval never starts.
+
+### Movement and Speed
+
+#### `enableGracePeriod`
 
 Enables a 1-second warning/grace period before game over when the snake is about to collide.
 
@@ -79,37 +113,7 @@ Enables a 1-second warning/grace period before game over when the snake is about
 - **When disabled**: Collision causes immediate game over with no warning window.
 - **Constrictor interaction**: Self-collision in constrictor mode always enters the `ignored` state regardless of the grace period setting. Walls and boundaries still respect the grace period.
 
-### `enableShrinkOnBonusFood` (default: `true`)
-
-Controls whether the snake shrinks when eating bonus food.
-
-- **Behavior**: When bonus food is eaten, the snake's length is halved via `this.snake.splice(Math.ceil(this.snake.length / 2))`, removing the tail half. Any pending `growth` counter is unaffected (the snake will still grow by remaining ticks if `growth > 0`). In constrictor mode, shrinking is capped at a minimum length of 15.
-- **Dependency**: Only has effect when `enableBonusFood` is also enabled and mode is not `constrictor` (bonus food must exist to be eaten).
-- **When disabled**: Eating bonus food still awards 100 points and clears the bonus food, but the snake retains its full length.
-
-### `enableSpeedUp` (default: `true`)
-
-Controls whether the game accelerates as the player eats food.
-
-- **Mechanism**: Each regular food eaten reduces the game loop interval by `SPEED_STEP=2.4`ms.
-- **Bounds**: Starts at `BASE_SPEED=135`ms, floors at `MIN_SPEED=50`ms.
-- **Implementation**: `clearInterval` on the old game loop, then `setInterval` with the new `currentSpeed`.
-- **Cascade effect**: Bonus food movement interval (`currentSpeed + 60`) also shifts when speed changes. Pause/resume recalculates intervals using the current speed.
-- **When disabled**: Game runs at a constant `BASE_SPEED=135`ms throughout the entire session.
-
-### `enableScoreBonus` (default: `true`)
-
-Enables a decaying bonus score multiplier displayed in the HUD as `Bonus: N`.
-
-- **Initial value**: Starts at 100 points each game and after each regular food eaten.
-- **Decay**: Decreases by 1 point every 200ms (5 points per second) via `setInterval`, bottoming out at 0. The HUD updates live (`Bonus: N`).
-- **Application**: When regular food is eaten, if `scoreBonus > 0`, the current bonus value is added to the score **in addition to** the base 10 points.
-- **Reset**: After eating regular food, `scoreBonus` resets to 100 and a new decay interval starts.
-- **HUD**: Shown as `<span class="bonus">Bonus: 100</span>` in the HUD bar between Score and Time.
-- **Pause/resume**: Decay timer is cleared on pause and restarted on resume (remaining decay continues from where it left off, but the value itself is not adjusted for elapsed pause time).
-- **When disabled**: No bonus score is ever added; the bonus HUD element still renders but never changes from its initial value display; decay interval never starts.
-
-### `enableWrap` (default: `true`)
+#### `enableWrap`
 
 Enables wrap-around boundaries — the snake teleports to the opposite edge instead of dying at walls.
 
@@ -119,7 +123,17 @@ Enables wrap-around boundaries — the snake teleports to the opposite edge inst
 - **Grace period interaction**: When `enableWrap` is on, wall collisions never occur, so the grace period only triggers on self-collision.
 - **When disabled**: Hitting any of the four walls triggers collision logic (grace period or immediate game over depending on `enableGracePeriod`).
 
-### `enableSpeedBoost` (default: `true`)
+#### `enableSpeedUp`
+
+Controls whether the game accelerates as the player eats food.
+
+- **Mechanism**: Each regular food eaten reduces the game loop interval by `SPEED_STEP=2.4`ms.
+- **Bounds**: Starts at `BASE_SPEED=135`ms, floors at `MIN_SPEED=50`ms.
+- **Implementation**: `clearInterval` on the old game loop, then `setInterval` with the new `currentSpeed`.
+- **Cascade effect**: Bonus food movement interval (`currentSpeed + 60`) also shifts when speed changes. Pause/resume recalculates intervals using the current speed.
+- **When disabled**: Game runs at a constant `BASE_SPEED=135`ms throughout the entire session.
+
+#### `enableSpeedBoost`
 
 Enables a temporary speed boost when the player presses the same direction key as the current movement direction.
 
@@ -131,7 +145,9 @@ Enables a temporary speed boost when the player presses the same direction key a
 - **Resume interaction**: On resume, the game loop uses the boosted interval if `speedBoostActive` is true.
 - **When disabled**: Pressing the same direction key does nothing special; game runs at constant `currentSpeed` regardless of repeated keypresses.
 
-### `enableInputBuffer` (default: `true`)
+### Input Handling
+
+#### `enableInputBuffer`
 
 Enables queuing rapid direction inputs so they aren't lost between game ticks.
 
@@ -141,7 +157,7 @@ Enables queuing rapid direction inputs so they aren't lost between game ticks.
 - **Grace period**: During warning state, `graceDirection` is used as the reference direction for buffer processing.
 - **When disabled**: Classic behavior — `nextDirection` is set directly on keypress; only the last keypress before a tick takes effect; no buffering.
 
-### `enableInstantMovement` (default: `true`)
+#### `enableInstantMovement`
 
 Changes how keystrokes are consumed. Instead of waiting for the next tick, the snake moves immediately when a valid arrow key is pressed.
 
@@ -153,17 +169,21 @@ Changes how keystrokes are consumed. Instead of waiting for the next tick, the s
 - **Grace period / ignored states**: No effect — instant movement only applies when `state === 'playing'` and the game loop is actively running.
 - **When disabled**: Classic behavior — inputs are consumed on the next `setInterval` tick via `_update()`.
 
-### `enableTimedBonusFood` (default: `true`)
+### Level Design
 
-Replaces the food-count-based bonus food spawn with a time-based trigger.
+#### `enableWalls`
 
-- **Mechanism**: A `setInterval` fires every 15 000 ms. If no bonus food is currently on the board, `_placeBonusFood()` is called.
-- **Dependency**: Requires `enableBonusFood` to also be enabled; otherwise does nothing.
-- **Replacement behavior**: When this option is on, the `foodsEaten % 5 === 0` trigger in `_update()` is bypassed entirely — bonus food spawns _only_ from the 15-second timer.
-- **Pause/resume**: Timer is cleared on pause (via `_clearAllTimers()`) and restarted fresh on resume via `_startBonusFoodTimer()`.
-- **When disabled**: Bonus food spawns via the original food-count mechanic (every 5 regular foods eaten).
+Enables static walls arranged as a hollow square ring with openings in the center of each side.
 
-### `enableWormholes` (default: `true`)
+- **Layout**: Four L-shaped wall segments forming a 14×14 square area (cols 3–16, rows 3–16) with 2-cell-wide gaps at the center of each side. Total 44 wall cells.
+- **Appearance**: Dark gray blocks (`#555`) with lighter top/left edges (`#777`) and darker bottom/right edges (`#333`) for a 3D beveled look.
+- **Collision**: Walls are always solid regardless of `enableWrap`. Hitting a wall triggers the same collision logic as hitting a boundary or self (grace period if `enableGracePeriod` is on, otherwise immediate game over).
+- **Food placement**: Both regular food and bonus food avoid spawning on wall cells.
+- **Bonus food movement**: Bonus food will not move onto a wall cell during its random walk.
+- **Warning escape**: Directions leading into a wall are rejected as unsafe during the grace period.
+- **When disabled**: No walls are rendered or checked; the arena is fully open (subject to `enableWrap` for boundary behavior).
+
+#### `enableWormholes`
 
 Enables a teleport mechanic with a wormhole entry/exit pair.
 
@@ -176,18 +196,6 @@ Enables a teleport mechanic with a wormhole entry/exit pair.
 - **Appearance**: `#003a00` (dark green) for entry, `#e8e8e8` (off-white) for exit. Drawn after walls, before snake.
 - **Constrictor**: Wormhole cells do not block flood-fill enclosure checks. Teleport fires before constrictor-specific head-food logic.
 - **When disabled**: No wormholes ever spawn; rendering, timers, and teleport checks are all skipped.
-
-### `enableWalls` (default: `true`)
-
-Enables static walls arranged as a hollow square ring with openings in the center of each side.
-
-- **Layout**: Four L-shaped wall segments forming a 14×14 square area (cols 3–16, rows 3–16) with 2-cell-wide gaps at the center of each side. Total 44 wall cells.
-- **Appearance**: Dark gray blocks (`#555`) with lighter top/left edges (`#777`) and darker bottom/right edges (`#333`) for a 3D beveled look.
-- **Collision**: Walls are always solid regardless of `enableWrap`. Hitting a wall triggers the same collision logic as hitting a boundary or self (grace period if `enableGracePeriod` is on, otherwise immediate game over).
-- **Food placement**: Both regular food and bonus food avoid spawning on wall cells.
-- **Bonus food movement**: Bonus food will not move onto a wall cell during its random walk.
-- **Warning escape**: Directions leading into a wall are rejected as unsafe during the grace period.
-- **When disabled**: No walls are rendered or checked; the arena is fully open (subject to `enableWrap` for boundary behavior).
 
 ## Tile Rendering System
 
