@@ -1084,9 +1084,21 @@ class InputManager {
    *   getState: () => string,
    *   onUpdate: () => void,
    *   scheduleNextTick: () => void,
+   *   onDirection: (dir: Point) => void,
+   *   onRestart: () => void,
    * }} deps
    */
-  constructor({ enableBuffer, enableBoost, enableInstant, isDirSafe, getState, onUpdate, scheduleNextTick }) {
+  constructor({
+    enableBuffer,
+    enableBoost,
+    enableInstant,
+    isDirSafe,
+    getState,
+    onUpdate,
+    scheduleNextTick,
+    onDirection,
+    onRestart,
+  }) {
     this._enableBuffer = enableBuffer;
     this._enableBoost = enableBoost;
     this._enableInstant = enableInstant;
@@ -1094,6 +1106,8 @@ class InputManager {
     this._getState = getState;
     this._onUpdate = onUpdate;
     this._scheduleNextTick = scheduleNextTick;
+    this._onDirection = onDirection;
+    this._onRestart = onRestart;
     /** @type {Point[]} Buffered direction inputs (max 2). */
     this.buffer = [];
     /** @type {boolean} Whether speed boost is currently active. */
@@ -1104,6 +1118,121 @@ class InputManager {
     this.nextDirection = { x: 0, y: 0 };
     /** @type {Point} Direction committed during grace period for rendering. */
     this.graceDirection = { x: 0, y: 0 };
+  }
+
+  /**
+   * Attaches keyboard and touch event listeners to the given DOM elements.
+   * @param {HTMLCanvasElement} canvas
+   * @param {HTMLElement} wrapper The game wrapper element for touch listeners.
+   */
+  bind(canvas, wrapper) {
+    this._canvas = canvas;
+    this._wrapper = wrapper;
+
+    this._boundKeydown = this._onKeydown.bind(this);
+    this._boundTouchStart = this._onTouchStart.bind(this);
+    this._boundTouchMove = this._onTouchMove.bind(this);
+    this._boundTouchEnd = this._onTouchEnd.bind(this);
+
+    this._canvas.addEventListener('keydown', this._boundKeydown);
+    this._wrapper.addEventListener('touchstart', this._boundTouchStart, { passive: false });
+    this._wrapper.addEventListener('touchmove', this._boundTouchMove, { passive: false });
+    this._wrapper.addEventListener('touchend', this._boundTouchEnd, { passive: false });
+  }
+
+  /**
+   * Removes all keyboard and touch event listeners.
+   */
+  destroy() {
+    if (this._canvas) {
+      this._canvas.removeEventListener('keydown', this._boundKeydown);
+    }
+    if (this._wrapper) {
+      this._wrapper.removeEventListener('touchstart', this._boundTouchStart);
+      this._wrapper.removeEventListener('touchmove', this._boundTouchMove);
+      this._wrapper.removeEventListener('touchend', this._boundTouchEnd);
+    }
+  }
+
+  /**
+   * Handles keyboard keydown events. Maps arrow keys to directions and
+   * Space (in OVER state) to restart.
+   * @private
+   * @param {KeyboardEvent} e
+   */
+  _onKeydown(e) {
+    if (this._getState() === STATE.OVER && e.code === 'Space') {
+      this._onRestart();
+      return;
+    }
+
+    const tag = e.target.tagName;
+    if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || tag === 'BUTTON' || e.target.isContentEditable) {
+      return;
+    }
+
+    const keyMap = {
+      ArrowUp: { x: 0, y: -1 },
+      ArrowDown: { x: 0, y: 1 },
+      ArrowLeft: { x: -1, y: 0 },
+      ArrowRight: { x: 1, y: 0 },
+    };
+
+    const newDir = keyMap[e.key];
+    if (!newDir) return;
+    e.preventDefault();
+
+    this._onDirection(newDir);
+  }
+
+  /**
+   * Minimum pixel distance a touch must travel to register as a swipe.
+   * @private
+   * @returns {number}
+   */
+  static get TOUCH_SWIPE_THRESHOLD() {
+    return 30;
+  }
+
+  /**
+   * Records the starting position of a touch for swipe detection.
+   * @private
+   * @param {TouchEvent} e
+   */
+  _onTouchStart(e) {
+    if (this._getState() !== STATE.WAITING) {
+      e.preventDefault();
+    }
+    this._touchSwipeStart = {
+      x: e.touches[0].clientX,
+      y: e.touches[0].clientY,
+    };
+  }
+
+  /**
+   * Prevents page scrolling during game play.
+   * @private
+   * @param {TouchEvent} e
+   */
+  _onTouchMove(e) {
+    e.preventDefault();
+  }
+
+  /**
+   * Detects a swipe direction and routes it to the game input pipeline.
+   * @private
+   * @param {TouchEvent} e
+   */
+  _onTouchEnd(e) {
+    if (!this._touchSwipeStart) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - this._touchSwipeStart.x;
+    const dy = t.clientY - this._touchSwipeStart.y;
+    if (Math.abs(dx) < InputManager.TOUCH_SWIPE_THRESHOLD && Math.abs(dy) < InputManager.TOUCH_SWIPE_THRESHOLD) return;
+
+    const dir = Math.abs(dx) > Math.abs(dy) ? { x: dx > 0 ? 1 : -1, y: 0 } : { x: 0, y: dy > 0 ? 1 : -1 };
+
+    this._onDirection(dir);
   }
 
   /**
@@ -1461,6 +1590,8 @@ class SnakeGame {
       getState: () => this.state,
       onUpdate: () => this._update(),
       scheduleNextTick: () => this._scheduleNextTick(),
+      onDirection: (dir) => this._handleDirectionInput(dir),
+      onRestart: () => this.init(),
     });
     /** @type {SpeedManager} */
     this.speed = new SpeedManager({
@@ -1487,6 +1618,7 @@ class SnakeGame {
     });
 
     this._buildDOM();
+    this.input.bind(this.canvas, this.container.querySelector('.snake-game-wrapper'));
     this._bindEvents();
     this.init();
   }
@@ -1504,7 +1636,7 @@ class SnakeGame {
           ${this.scoreBonus.getHUDHtml()}
           <span class="snake-timer">Time: 0:00</span>
         </div>
-        <div class="snake-game-wrapper"><canvas class="snake-canvas" width="500" height="500" tabindex="0"></canvas><div class="snake-focus-overlay">Click to focus</div></div>
+        <div class="snake-game-wrapper"><canvas class="snake-canvas" width="500" height="500" tabindex="0"></canvas><div class="snake-focus-overlay">Click or tap to focus</div></div>
         <div class="snake-message">Press any arrow key to start</div>
       </div>
     `;
@@ -1521,11 +1653,10 @@ class SnakeGame {
   }
 
   /**
-   * Binds canvas keydown, focus, and blur event listeners.
+   * Binds focus, blur, and overlay-click event listeners for pause/resume.
    * @private
    */
   _bindEvents() {
-    this._onKeydown = this._handleKeydown.bind(this);
     this._onFocus = () => {
       this.overlay.classList.add('snake-hidden');
       this._resumeGame();
@@ -1536,7 +1667,6 @@ class SnakeGame {
     };
     this._onClick = () => this.canvas.focus();
 
-    this.canvas.addEventListener('keydown', this._onKeydown);
     this.canvas.addEventListener('focus', this._onFocus);
     this.canvas.addEventListener('blur', this._onBlur);
     this.overlay.addEventListener('click', this._onClick);
@@ -1546,10 +1676,10 @@ class SnakeGame {
    * Removes event listeners and clears all timers. Call before re-mounting.
    */
   destroy() {
-    this.canvas.removeEventListener('keydown', this._onKeydown);
     this.canvas.removeEventListener('focus', this._onFocus);
     this.canvas.removeEventListener('blur', this._onBlur);
     this.overlay.removeEventListener('click', this._onClick);
+    this.input.destroy();
     this._clearAllTimers();
   }
 
@@ -1592,8 +1722,8 @@ class SnakeGame {
     if (this.bonusElement) {
       this.bonusElement.textContent = 'Bonus: 100';
     }
-    this.messageElement.textContent = 'Press any arrow key to start';
-    this.overlay.textContent = 'Click to focus';
+    this.messageElement.textContent = 'Use arrow keys or swipe to start';
+    this.overlay.textContent = 'Click or tap to focus';
     this._placeFood();
     this._draw();
   }
@@ -2151,7 +2281,7 @@ class SnakeGame {
     if (this.state === STATE.WARNING) {
       this.warningElapsed = Date.now() - this.warningStart;
     }
-    this.overlay.textContent = 'Paused \u2014 Click to resume';
+    this.overlay.textContent = 'Paused \u2014 Click or tap to resume';
   }
 
   /**
@@ -2186,7 +2316,7 @@ class SnakeGame {
       this.bonusFood.startTimers();
       this.wormholes.startTimers();
     }
-    this.overlay.textContent = 'Click to focus';
+    this.overlay.textContent = 'Click or tap to focus';
   }
 
   /**
@@ -2200,44 +2330,24 @@ class SnakeGame {
   }
 
   /**
-   * Handles keyboard input. Routes to state-specific handlers.
+   * Routes a cardinal direction input (from keyboard or swipe) to the
+   * appropriate state-specific handler.
    * @private
-   * @param {KeyboardEvent} e
+   * @param {Point} dir
    */
-  _handleKeydown(e) {
-    if (this.state === STATE.OVER && e.code === 'Space') {
-      this.init();
-      return;
-    }
-
-    const tag = e.target.tagName;
-    if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || tag === 'BUTTON' || e.target.isContentEditable) {
-      return;
-    }
-
-    const keyMap = {
-      ArrowUp: { x: 0, y: -1 },
-      ArrowDown: { x: 0, y: 1 },
-      ArrowLeft: { x: -1, y: 0 },
-      ArrowRight: { x: 1, y: 0 },
-    };
-
-    const newDir = keyMap[e.key];
-    if (!newDir) return;
-    e.preventDefault();
-
+  _handleDirectionInput(dir) {
     switch (this.state) {
       case STATE.WAITING:
-        this._handleInputWaiting(newDir);
+        this._handleInputWaiting(dir);
         break;
       case STATE.WARNING:
-        this._handleInputWarning(newDir);
+        this._handleInputWarning(dir);
         break;
       case STATE.IGNORED:
-        this._handleInputIgnored(newDir);
+        this._handleInputIgnored(dir);
         break;
       case STATE.PLAYING:
-        this._handleInputPlaying(newDir);
+        this._handleInputPlaying(dir);
         break;
     }
   }
