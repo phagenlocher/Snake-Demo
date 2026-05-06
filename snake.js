@@ -194,37 +194,37 @@ const TILE_RENDERERS = {
     ctx.fillStyle = p.body;
     ctx.fillRect(0, 0, 26, 26);
     ctx.fillStyle = p.head;
-    ctx.fillRect(1, 1, 24, 24);
+    ctx.fillRect(3, 3, 20, 20);
     ctx.fillStyle = p.eye;
-    ctx.fillRect(5, 2, 5, 4);
-    ctx.fillRect(16, 2, 5, 4);
+    ctx.fillRect(5, 4, 5, 4);
+    ctx.fillRect(16, 4, 5, 4);
   },
   headDown(ctx, p) {
     ctx.fillStyle = p.body;
     ctx.fillRect(0, 0, 26, 26);
     ctx.fillStyle = p.head;
-    ctx.fillRect(1, 1, 24, 24);
+    ctx.fillRect(3, 3, 20, 20);
     ctx.fillStyle = p.eye;
-    ctx.fillRect(5, 20, 5, 4);
-    ctx.fillRect(16, 20, 5, 4);
+    ctx.fillRect(5, 18, 5, 4);
+    ctx.fillRect(16, 18, 5, 4);
   },
   headLeft(ctx, p) {
     ctx.fillStyle = p.body;
     ctx.fillRect(0, 0, 26, 26);
     ctx.fillStyle = p.head;
-    ctx.fillRect(1, 1, 24, 24);
+    ctx.fillRect(3, 3, 20, 20);
     ctx.fillStyle = p.eye;
-    ctx.fillRect(2, 5, 4, 5);
-    ctx.fillRect(2, 16, 4, 5);
+    ctx.fillRect(4, 5, 4, 5);
+    ctx.fillRect(4, 16, 4, 5);
   },
   headRight(ctx, p) {
     ctx.fillStyle = p.body;
     ctx.fillRect(0, 0, 26, 26);
     ctx.fillStyle = p.head;
-    ctx.fillRect(1, 1, 24, 24);
+    ctx.fillRect(3, 3, 20, 20);
     ctx.fillStyle = p.eye;
-    ctx.fillRect(20, 5, 4, 5);
-    ctx.fillRect(20, 16, 4, 5);
+    ctx.fillRect(18, 5, 4, 5);
+    ctx.fillRect(18, 16, 4, 5);
   },
   bodyHoriz(ctx, p) {
     ctx.fillStyle = p.body;
