@@ -197,6 +197,30 @@ Enables a teleport mechanic with a wormhole entry/exit pair.
 - **Constrictor**: Wormhole cells do not block flood-fill enclosure checks. Teleport fires before constrictor-specific head-food logic.
 - **When disabled**: No wormholes ever spawn; rendering, timers, and teleport checks are all skipped.
 
+### Visual
+
+#### `enableColorblindMode`
+
+Applies Bang Wong's colorblind-friendly palette (doi:10.1038/nmeth.1618) across all in-game visuals and UI.
+
+- **Disabled by default** — when off, the standard color scheme is used.
+- **Implementation**: A `THEME_COLORBLIND` object (paired with `THEME_DEFAULT` for the standard palette) and four colorblind palettes (`PALETTE_NORMAL_CB`, `PALETTE_WARNING_CB`, `PALETTE_IGNORED_CB`, `PALETTE_BOOST_CB`) are defined. At construction, `this.colors` binds the active theme. `_createTiles()` selects the right palettes; static tile renderers (`wall`, `food`, `bonusFood`, `wormholeEntry`, `wormholeExit`) draw from the active theme via a `theme` parameter threaded through `_makeTile()`. `_draw()` reads background, overlay, and overlay text colors from `this.colors`. CSS overrides are applied via a `snake-colorblind` class toggled on `<body>` in `mountGame()`.
+- **Bang Wong color assignments** (doi:10.1038/nmeth.1618):
+
+| Bang Wong Color | Hex       | Game Element                                   |
+| --------------- | --------- | ---------------------------------------------- |
+| Black           | `#000000` | Canvas background, snake eyes, page background |
+| Bluish Green    | `#009E73` | Snake body (normal, speed boost)               |
+| Sky Blue        | `#56B4E9` | Snake head (normal, constrictor ignored)       |
+| Orange          | `#E69F00` | Regular food, warning head, wormhole exit      |
+| Yellow          | `#F0E442` | Bonus food, speed boost head                   |
+| Blue            | `#0072B2` | Wall body                                      |
+| Vermillion      | `#D55E00` | Warning body                                   |
+| Reddish Purple  | `#CC79A7` | Constrictor ignored body, wormhole entry       |
+
+- **UI overrides**: `.snake-colorblind` CSS rules override body background, text color, checkbox accent, mode select, HUD bonus color, canvas background, game wrapper border, and focus overlay color to match the palette.
+- **When disabled**: All visuals use the standard/default color theme.
+
 ## Tile Rendering System
 
 Snake segments are rendered using pre-rendered off-screen canvas tiles instead of per-frame drawing calls. Non-snake entities (walls, food, bonus food, wormholes) also use pre-rendered tiles.
@@ -205,22 +229,46 @@ Snake segments are rendered using pre-rendered off-screen canvas tiles instead o
 
 - **Concept**: At game init, 51 off-screen `<canvas>` elements (26×26px each) are created and stored in `this.tiles`. Each frame, the appropriate tile is drawn onto the main canvas via `drawImage()`.
 - **Performance**: Reduces per-frame drawing from dozens of `fillRect` calls to a single `drawImage` per segment/entity.
-- **Location**: `snake.js:184-190` (palettes), `snake.js:193-350` (TILE_RENDERERS), `snake.js:353` (STATIC_TILE_KEYS), `snake.js:1982-2003` (tile creation), `snake.js:1928-1944` (draw-time lookup + drawImage).
+- **Location**: `snake.js:106-137` (theme objects), `snake.js:193-350` (TILE_RENDERERS), `snake.js:353` (STATIC_TILE_KEYS), `snake.js:1982-2003` (tile creation), `snake.js:1928-1944` (draw-time lookup + drawImage).
 
-### Palettes (`snake.js:184-190`)
+### Color Themes (`snake.js:106-137`)
 
-Four color palettes define segment colors for different game states. Each palette has `body`, `head`, and `eye` properties:
+Two color theme objects define all visual colors — static element colors, palettes for snake segments, and UI colors. At construction, `this.colors` is bound to the active theme. All rendering code reads from `this.colors.*`.
 
-| Palette           | Key    | Body      | Head      | Eye       | State                      |
-| ----------------- | ------ | --------- | --------- | --------- | -------------------------- |
-| `PALETTE_NORMAL`  | `''`   | `#4a7a4a` | `#8ad88a` | `#0d1a0d` | Playing                    |
-| `PALETTE_WARNING` | `'_w'` | `#ff6666` | `#ffaaaa` | `#4a0000` | Grace period               |
-| `PALETTE_IGNORED` | `'_i'` | `#c084fc` | `#e2ccff` | `#4a0060` | Constrictor self-collision |
-| `PALETTE_BOOST`   | `'_b'` | `#4a7a4a` | `#f0e68c` | `#0d1a0d` | Speed boost (head only)    |
+`THEME_DEFAULT` (lines 107–125):
+| Key | Value | Usage |
+| --- | ----- | ----- |
+| `bg` | `#0d1a0d` | Canvas background |
+| `wallBody` | `#555` | Wall fill |
+| `wallEdgeLight` | `#777` | Wall top/left highlight |
+| `wallEdgeDark` | `#333` | Wall bottom/right shadow |
+| `food` | `#ff4444` | Regular food circle |
+| `foodBonus` | `#ffd700` | Bonus food diamond |
+| `wormholeEntry` | `#003a00` | Wormhole entry cell |
+| `wormholeExit` | `#e8e8e8` | Wormhole exit cell |
+| `overlay` | `rgba(0,0,0,0.7)` | Game-over overlay |
+| `overlayText` | `#fff` | Overlay text |
+| `paletteNormal` | `{ body:#4a7a4a, head:#8ad88a, eye:#0d1a0d }` | Playing |
+| `paletteWarning` | `{ body:#ff6666, head:#ffaaaa, eye:#4a0000 }` | Grace period |
+| `paletteIgnored` | `{ body:#c084fc, head:#e2ccff, eye:#4a0060 }` | Constrictor ignored |
+| `paletteBoost` | `{ body:#4a7a4a, head:#f0e68c, eye:#0d1a0d }` | Speed boost (head only) |
+
+`THEME_COLORBLIND` (lines 127–137) follows the same structure with Bang Wong colorblind-friendly values (doi:10.1038/nmeth.1618).
+
+### Palettes
+
+Each palette has `body`, `head`, and `eye` properties, accessed via `this.colors.paletteNormal` / `paletteWarning` / `paletteIgnored` / `paletteBoost`. The active palette set is determined by the bound theme. Each pixel value in the palette also includes the blind variant that are used on the off-chance that a common color blindness display is used (see `THEME_COLORBLIND`).
+
+| Palette          | Key    | State                      |
+| ---------------- | ------ | -------------------------- |
+| `paletteNormal`  | `''`   | Playing                    |
+| `paletteWarning` | `'_w'` | Grace period               |
+| `paletteIgnored` | `'_i'` | Constrictor self-collision |
+| `paletteBoost`   | `'_b'` | Speed boost (head only)    |
 
 ### Segment Shapes (`TILE_RENDERERS`, `snake.js:193-350`)
 
-19 drawing functions, each receiving `(ctx, palette)` and drawing on a 26×26 canvas:
+19 drawing functions, each receiving `(ctx, palette)` for snake shapes or `(ctx, _p, theme)` for static shapes and drawing on a 26×26 canvas:
 
 | Key             | Lines   | Shape                                              |
 | --------------- | ------- | -------------------------------------------------- |
@@ -238,11 +286,11 @@ Four color palettes define segment colors for different game states. Each palett
 | `cornerLD`      | 277-287 | Left→down corner (arc in top-right quadrant)       |
 | `cornerRU`      | 288-298 | Right→up corner (arc in bottom-left quadrant)      |
 | `cornerLU`      | 299-309 | Left→up corner (arc in bottom-right quadrant)      |
-| `wall`          | 310-318 | 3D beveled wall block (static tile, no palette)    |
-| `food`          | 320-327 | Red circle (static tile, no palette)               |
-| `bonusFood`     | 329-340 | Golden diamond (static tile, no palette)           |
-| `wormholeEntry` | 342-344 | Dark green filled square (static tile, no palette) |
-| `wormholeExit`  | 346-348 | Off-white filled square (static tile, no palette)  |
+| `wall`          | 310-318 | 3D beveled wall block (static tile, uses theme)    |
+| `food`          | 320-327 | Red circle (static tile, uses theme)               |
+| `bonusFood`     | 329-340 | Golden diamond (static tile, uses theme)           |
+| `wormholeEntry` | 342-344 | Dark green filled square (static tile, uses theme) |
+| `wormholeExit`  | 346-348 | Off-white filled square (static tile, uses theme)  |
 
 ### Tile Creation (`_createTiles`, `snake.js:1982-2003`)
 
@@ -324,7 +372,7 @@ To add a new shape:
   - `SpeedManager` (`snake.js:1028-1061`) — game-speed acceleration from food eaten
   - `InputManager` (`snake.js:1068-1338`) — direction buffering, speed boost, instant movement, touch/swipe input
   - `CollisionResolver` (`snake.js:1345-1460`) — collision detection, grace period, ignored state routing
-- **Options**: `mode` (`'classic'`, `'timeTrial'`, or `'constrictor'`), `enableBonusFood`, `enableGracePeriod`, `enableShrinkOnBonusFood`, `enableSpeedUp`, `enableScoreBonus`, `enableWrap`, `enableSpeedBoost`, `enableInputBuffer`, `enableInstantMovement`, `enableTimedBonusFood`, `enableWalls`, `enableWormholes` — toggled via UI; game remounts on change
+- **Options**: `mode` (`'classic'`, `'timeTrial'`, or `'constrictor'`), `enableBonusFood`, `enableGracePeriod`, `enableShrinkOnBonusFood`, `enableSpeedUp`, `enableScoreBonus`, `enableWrap`, `enableSpeedBoost`, `enableInputBuffer`, `enableInstantMovement`, `enableTimedBonusFood`, `enableWalls`, `enableWormholes`, `enableColorblindMode` — toggled via UI; game remounts on change
 - **Canvas**: 500×500px, grid size `COLS=20, ROWS=20`, cell size `CELL_SIZE=25`px
 - **HUD**: Score display + bonus score + timer (`Time: M:SS`)
 - **State machine** (`snake.js:89-104`): `waiting` → `playing` → `warning`/`ignored` → `over` (Space restarts to `waiting`); transitions validated via `STATE_TRANSITIONS`

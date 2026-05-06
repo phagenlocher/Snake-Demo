@@ -103,22 +103,41 @@ const STATE_TRANSITIONS = Object.freeze({
   [STATE.OVER]: [STATE.WAITING],
 });
 
-/** @const {string} Background color. */
-const COLOR_BG = '#0d1a0d';
-/** @const {string} Wall body color. */
-const COLOR_WALL_BODY = '#555';
-/** @const {string} Wall top/left edge highlight. */
-const COLOR_WALL_EDGE_LIGHT = '#777';
-/** @const {string} Wall bottom/right edge shadow. */
-const COLOR_WALL_EDGE_DARK = '#333';
-/** @const {string} Regular food color. */
-const COLOR_FOOD = '#ff4444';
-/** @const {string} Bonus food (golden diamond) color. */
-const COLOR_FOOD_BONUS = '#ffd700';
-/** @const {string} Wormhole entry cell color. */
-const COLOR_WORMHOLE_ENTRY = '#003a00';
-/** @const {string} Wormhole exit cell color. */
-const COLOR_WORMHOLE_EXIT = '#e8e8e8';
+/** @type {Object} Default theme. */
+const THEME_DEFAULT = {
+  bg: '#0d1a0d',
+  wallBody: '#555',
+  wallEdgeLight: '#777',
+  wallEdgeDark: '#333',
+  food: '#ff4444',
+  foodBonus: '#ffd700',
+  wormholeEntry: '#003a00',
+  wormholeExit: '#e8e8e8',
+  overlay: 'rgba(0, 0, 0, 0.7)',
+  overlayText: '#fff',
+  paletteNormal: { body: '#4a7a4a', head: '#8ad88a', eye: '#0d1a0d' },
+  paletteWarning: { body: '#ff6666', head: '#ffaaaa', eye: '#4a0000' },
+  paletteIgnored: { body: '#c084fc', head: '#e2ccff', eye: '#4a0060' },
+  paletteBoost: { body: '#4a7a4a', head: '#f0e68c', eye: '#0d1a0d' },
+};
+
+/** @type {Object} Bang Wong colorblind-friendly theme (doi:10.1038/nmeth.1618). */
+const THEME_COLORBLIND = {
+  bg: '#000000',
+  wallBody: '#0072B2',
+  wallEdgeLight: '#56B4E9',
+  wallEdgeDark: '#00305a',
+  food: '#E69F00',
+  foodBonus: '#F0E442',
+  wormholeEntry: '#CC79A7',
+  wormholeExit: '#E69F00',
+  overlay: 'rgba(0, 0, 0, 0.7)',
+  overlayText: '#FFFFFF',
+  paletteNormal: { body: '#009E73', head: '#56B4E9', eye: '#000000' },
+  paletteWarning: { body: '#D55E00', head: '#E69F00', eye: '#000000' },
+  paletteIgnored: { body: '#CC79A7', head: '#56B4E9', eye: '#000000' },
+  paletteBoost: { body: '#009E73', head: '#F0E442', eye: '#000000' },
+};
 /** @const {number} Wormhole spawn interval in ms. */
 const WORMHOLE_SPAWN_INTERVAL_MS = 30000;
 /** @const {number} Wormhole lifetime in ms. */
@@ -127,10 +146,6 @@ const WORMHOLE_LIFETIME_MS = 15000;
 const WORMHOLE_MIN_DISTANCE = 5;
 /** @const {number} Minimum free tiles required to spawn wormholes. */
 const WORMHOLE_MIN_FREE_TILES = 10;
-/** @const {string} Game-over overlay color. */
-const COLOR_OVERLAY = 'rgba(0, 0, 0, 0.7)';
-/** @const {string} Overlay text color. */
-const COLOR_OVERLAY_TEXT = '#fff';
 /** @const {number} Speed boost divisor factor (1.35 = ~35% faster). */
 const SPEED_BOOST_FACTOR = 1.35;
 /** @const {number} Warning/grace period timeout in ms. */
@@ -179,15 +194,6 @@ const CORNER_MAP = {
   'Left->Up': 'cornerLU',
   'Down->Left': 'cornerRU',
 };
-
-/** @type {Palette} Normal playing-state colors. */
-const PALETTE_NORMAL = { body: '#4a7a4a', head: '#8ad88a', eye: '#0d1a0d' };
-/** @type {Palette} Warning/grace-period colors (red tint). */
-const PALETTE_WARNING = { body: '#ff6666', head: '#ffaaaa', eye: '#4a0000' };
-/** @type {Palette} Constrictor self-collision ("ignored") colors (magenta tint). */
-const PALETTE_IGNORED = { body: '#c084fc', head: '#e2ccff', eye: '#4a0060' };
-/** @type {Palette} Speed-boost colors (goldenrod head only, body stays normal). */
-const PALETTE_BOOST = { body: '#4a7a4a', head: '#f0e68c', eye: '#0d1a0d' };
 
 /** @type {Object<string, TileRenderer>} Tile shape drawing functions keyed by shape name. */
 const TILE_RENDERERS = {
@@ -307,30 +313,30 @@ const TILE_RENDERERS = {
     ctx.closePath();
     ctx.fill();
   },
-  wall(ctx) {
-    ctx.fillStyle = COLOR_WALL_BODY;
+  wall(ctx, _p, theme) {
+    ctx.fillStyle = theme.wallBody;
     ctx.fillRect(0, 0, 26, 26);
-    ctx.fillStyle = COLOR_WALL_EDGE_LIGHT;
+    ctx.fillStyle = theme.wallEdgeLight;
     ctx.fillRect(0, 0, 25, 1);
     ctx.fillRect(0, 0, 1, 25);
-    ctx.fillStyle = COLOR_WALL_EDGE_DARK;
+    ctx.fillStyle = theme.wallEdgeDark;
     ctx.fillRect(25, 0, 1, 26);
     ctx.fillRect(0, 25, 26, 1);
   },
-  food(ctx) {
+  food(ctx, _p, theme) {
     const cx = 13;
     const cy = 13;
     const r = 10;
-    ctx.fillStyle = COLOR_FOOD;
+    ctx.fillStyle = theme.food;
     ctx.beginPath();
     ctx.arc(cx, cy, r, 0, Math.PI * 2);
     ctx.fill();
   },
-  bonusFood(ctx) {
+  bonusFood(ctx, _p, theme) {
     const cx = 13;
     const cy = 13;
     const r = 8;
-    ctx.fillStyle = COLOR_FOOD_BONUS;
+    ctx.fillStyle = theme.foodBonus;
     ctx.beginPath();
     ctx.moveTo(cx, cy - r);
     ctx.lineTo(cx + r, cy);
@@ -339,12 +345,12 @@ const TILE_RENDERERS = {
     ctx.closePath();
     ctx.fill();
   },
-  wormholeEntry(ctx) {
-    ctx.fillStyle = COLOR_WORMHOLE_ENTRY;
+  wormholeEntry(ctx, _p, theme) {
+    ctx.fillStyle = theme.wormholeEntry;
     ctx.fillRect(1, 1, 23, 23);
   },
-  wormholeExit(ctx) {
-    ctx.fillStyle = COLOR_WORMHOLE_EXIT;
+  wormholeExit(ctx, _p, theme) {
+    ctx.fillStyle = theme.wormholeExit;
     ctx.fillRect(1, 1, 23, 23);
   },
 };
@@ -1490,6 +1496,7 @@ class SnakeGame {
    * @param {boolean} [options.enableTimedBonusFood=true] Spawn bonus food every 15s.
    * @param {boolean} [options.enableWalls=true] Enable wall ring inside arena.
    * @param {boolean} [options.enableWormholes=true] Enable wormhole teleport pairs.
+   * @param {boolean} [options.enableColorblindMode=false] Use Bang Wong colorblind-friendly palette.
    */
   constructor(container, options = {}) {
     this.container = container;
@@ -1508,6 +1515,7 @@ class SnakeGame {
       enableTimedBonusFood: options.enableTimedBonusFood !== undefined ? options.enableTimedBonusFood : true,
       enableWalls: options.enableWalls !== undefined ? options.enableWalls : true,
       enableWormholes: options.enableWormholes !== undefined ? options.enableWormholes : true,
+      enableColorblindMode: options.enableColorblindMode !== undefined ? options.enableColorblindMode : false,
     };
 
     /** @type {number} Number of grid columns. */
@@ -1522,6 +1530,8 @@ class SnakeGame {
     this.RATE_STEP = 0.2;
     /** @type {number} Time-trial countdown duration in ms (2 minutes). */
     this.TIME_LIMIT = 120000;
+    /** @type {Object} Active color theme (THEME_DEFAULT or THEME_COLORBLIND). */
+    this.colors = this.options.enableColorblindMode ? THEME_COLORBLIND : THEME_DEFAULT;
 
     /** @type {WallsManager} */
     this.walls = new WallsManager({ enabled: this.options.enableWalls });
@@ -1899,7 +1909,7 @@ class SnakeGame {
    * @private
    */
   _draw() {
-    this.ctx.fillStyle = COLOR_BG;
+    this.ctx.fillStyle = this.colors.bg;
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
     if (this.walls.enabled) {
@@ -1962,9 +1972,9 @@ class SnakeGame {
     }
 
     if (this.state === STATE.OVER) {
-      this.ctx.fillStyle = COLOR_OVERLAY;
+      this.ctx.fillStyle = this.colors.overlay;
       this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-      this.ctx.fillStyle = COLOR_OVERLAY_TEXT;
+      this.ctx.fillStyle = this.colors.overlayText;
       this.ctx.font = 'bold 32px Courier New';
       this.ctx.textAlign = 'center';
       this.ctx.textBaseline = 'middle';
@@ -1981,9 +1991,9 @@ class SnakeGame {
    */
   _createTiles() {
     const sets = [
-      { palette: PALETTE_NORMAL, suffix: '' },
-      { palette: PALETTE_WARNING, suffix: '_w' },
-      { palette: PALETTE_IGNORED, suffix: '_i' },
+      { palette: this.colors.paletteNormal, suffix: '' },
+      { palette: this.colors.paletteWarning, suffix: '_w' },
+      { palette: this.colors.paletteIgnored, suffix: '_i' },
     ];
 
     this.tiles = {};
@@ -1994,11 +2004,11 @@ class SnakeGame {
 
     const boostHeadKeys = ['headUp', 'headDown', 'headLeft', 'headRight'];
     for (const key of boostHeadKeys) {
-      this.tiles[`${key}_b`] = this._makeTile(key, PALETTE_BOOST);
+      this.tiles[`${key}_b`] = this._makeTile(key, this.colors.paletteBoost);
     }
 
     for (const key of STATIC_TILE_KEYS) {
-      this.tiles[key] = this._makeTile(key, PALETTE_NORMAL);
+      this.tiles[key] = this._makeTile(key, this.colors.paletteNormal, this.colors);
     }
   }
 
@@ -2025,12 +2035,12 @@ class SnakeGame {
    * @param {Palette} palette The palette to render with.
    * @returns {HTMLCanvasElement}
    */
-  _makeTile(key, palette) {
+  _makeTile(key, palette, theme) {
     const canvas = document.createElement('canvas');
     canvas.width = this.CELL_SIZE + 1;
     canvas.height = this.CELL_SIZE + 1;
     const ctx = canvas.getContext('2d');
-    TILE_RENDERERS[key](ctx, palette);
+    TILE_RENDERERS[key](ctx, palette, theme);
     return canvas;
   }
 

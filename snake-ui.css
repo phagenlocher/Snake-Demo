@@ -91,3 +91,24 @@ hr + .snake-features-details {
   letter-spacing: 1px;
   cursor: pointer;
 }
+body.snake-colorblind {
+  background: #000000;
+  color: #009e73;
+}
+.snake-colorblind .snake-toggle-heading {
+  color: #009e73;
+}
+.snake-colorblind .snake-toggle-grid input[type='checkbox'] {
+  accent-color: #009e73;
+}
+.snake-colorblind .snake-root > hr {
+  border-color: #009e73;
+}
+.snake-colorblind .snake-mode-selector label {
+  color: #009e73;
+}
+.snake-colorblind .snake-mode-select {
+  background: #000000;
+  color: #009e73;
+  border-color: #009e73;
+}

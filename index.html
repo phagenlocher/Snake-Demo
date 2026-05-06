@@ -93,6 +93,15 @@ You should have received a copy of the CC0 Public Domain Dedication along with t
               >
             </div>
           </div>
+          <div class="snake-toggle-group">
+            <p class="snake-toggle-heading">Visual</p>
+            <div class="snake-toggle-grid">
+              <label
+                title="Use Bang Wong colorblind-friendly palette (Bluish Green, Orange, Sky Blue, Yellow, Blue, Vermillion, Reddish Purple, Black)"
+                ><input type="checkbox" class="snake-toggle-colorblind" /> Colorblind Mode</label
+              >
+            </div>
+          </div>
         </div>
       </details>
     </div>
@@ -115,6 +124,7 @@ You should have received a copy of the CC0 Public Domain Dedication along with t
       const toggleWalls = document.querySelector('.snake-toggle-walls');
       const toggleInstantMovement = document.querySelector('.snake-toggle-instant-movement');
       const toggleWormholes = document.querySelector('.snake-toggle-wormholes');
+      const toggleColorblind = document.querySelector('.snake-toggle-colorblind');
 
       let game = null;
 
@@ -133,6 +143,7 @@ You should have received a copy of the CC0 Public Domain Dedication along with t
           enableTimedBonusFood: toggleTimedBonus.checked,
           enableWalls: toggleWalls.checked,
           enableWormholes: toggleWormholes.checked,
+          enableColorblindMode: toggleColorblind.checked,
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
       }
@@ -155,6 +166,7 @@ You should have received a copy of the CC0 Public Domain Dedication along with t
           if (typeof s.enableTimedBonusFood === 'boolean') toggleTimedBonus.checked = s.enableTimedBonusFood;
           if (typeof s.enableWalls === 'boolean') toggleWalls.checked = s.enableWalls;
           if (typeof s.enableWormholes === 'boolean') toggleWormholes.checked = s.enableWormholes;
+          if (typeof s.enableColorblindMode === 'boolean') toggleColorblind.checked = s.enableColorblindMode;
         } catch (_) {
           // corrupted or missing → use HTML defaults
         }
@@ -178,7 +190,9 @@ You should have received a copy of the CC0 Public Domain Dedication along with t
           enableTimedBonusFood: toggleTimedBonus.checked,
           enableWalls: toggleWalls.checked,
           enableWormholes: toggleWormholes.checked,
+          enableColorblindMode: toggleColorblind.checked,
         });
+        document.body.classList.toggle('snake-colorblind', toggleColorblind.checked);
         saveSettings();
       }
 
@@ -195,6 +209,7 @@ You should have received a copy of the CC0 Public Domain Dedication along with t
       toggleTimedBonus.addEventListener('change', mountGame);
       toggleWalls.addEventListener('change', mountGame);
       toggleWormholes.addEventListener('change', mountGame);
+      toggleColorblind.addEventListener('change', mountGame);
 
       loadSettings();
       mountGame();
