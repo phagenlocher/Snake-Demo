@@ -307,7 +307,45 @@ const TILE_RENDERERS = {
     ctx.closePath();
     ctx.fill();
   },
+  wall(ctx) {
+    ctx.fillStyle = COLOR_WALL_BODY;
+    ctx.fillRect(0, 0, 26, 26);
+    ctx.fillStyle = COLOR_WALL_EDGE_LIGHT;
+    ctx.fillRect(0, 0, 25, 1);
+    ctx.fillRect(0, 0, 1, 25);
+    ctx.fillStyle = COLOR_WALL_EDGE_DARK;
+    ctx.fillRect(25, 0, 1, 26);
+    ctx.fillRect(0, 25, 26, 1);
+  },
+  food(ctx) {
+    ctx.fillStyle = COLOR_FOOD;
+    ctx.fillRect(1, 1, 23, 23);
+  },
+  bonusFood(ctx) {
+    const cx = 13;
+    const cy = 13;
+    const r = 8;
+    ctx.fillStyle = COLOR_FOOD_BONUS;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - r);
+    ctx.lineTo(cx + r, cy);
+    ctx.lineTo(cx, cy + r);
+    ctx.lineTo(cx - r, cy);
+    ctx.closePath();
+    ctx.fill();
+  },
+  wormholeEntry(ctx) {
+    ctx.fillStyle = COLOR_WORMHOLE_ENTRY;
+    ctx.fillRect(1, 1, 23, 23);
+  },
+  wormholeExit(ctx) {
+    ctx.fillStyle = COLOR_WORMHOLE_EXIT;
+    ctx.fillRect(1, 1, 23, 23);
+  },
 };
+
+/** @const {Set<string>} Tile keys that are static (not palette-dependent). */
+const STATIC_TILE_KEYS = new Set(['wall', 'food', 'bonusFood', 'wormholeEntry', 'wormholeExit']);
 
 /**
  * Manages named timers (intervals and timeouts) with clear-by-name semantics.
@@ -526,25 +564,6 @@ class WallsManager {
   get count() {
     return WALLS.length;
   }
-
-  /**
-   * Draws all walls onto the canvas with a 3D beveled appearance.
-   * @param {CanvasRenderingContext2D} ctx
-   * @param {number} cellSize Pixel size of each grid cell.
-   */
-  draw(ctx, cellSize) {
-    if (!this.enabled) return;
-    WALLS.forEach((w) => {
-      ctx.fillStyle = COLOR_WALL_BODY;
-      ctx.fillRect(w.x * cellSize, w.y * cellSize, cellSize, cellSize);
-      ctx.fillStyle = COLOR_WALL_EDGE_LIGHT;
-      ctx.fillRect(w.x * cellSize, w.y * cellSize, cellSize - 1, 1);
-      ctx.fillRect(w.x * cellSize, w.y * cellSize, 1, cellSize - 1);
-      ctx.fillStyle = COLOR_WALL_EDGE_DARK;
-      ctx.fillRect((w.x + 1) * cellSize - 1, w.y * cellSize, 1, cellSize);
-      ctx.fillRect(w.x * cellSize, (w.y + 1) * cellSize - 1, cellSize, 1);
-    });
-  }
 }
 
 /**
@@ -682,19 +701,6 @@ class WormholesManager {
       return true;
     }
     return false;
-  }
-
-  /**
-   * Draws the wormhole entry (dark green) and exit (off-white) cells.
-   * @param {CanvasRenderingContext2D} ctx
-   * @param {number} cellSize Pixel size of each grid cell.
-   */
-  draw(ctx, cellSize) {
-    if (!this._enabled || !this.entry) return;
-    ctx.fillStyle = COLOR_WORMHOLE_ENTRY;
-    ctx.fillRect(this.entry.x * cellSize + 1, this.entry.y * cellSize + 1, cellSize - 2, cellSize - 2);
-    ctx.fillStyle = COLOR_WORMHOLE_EXIT;
-    ctx.fillRect(this.exit.x * cellSize + 1, this.exit.y * cellSize + 1, cellSize - 2, cellSize - 2);
   }
 
   /** Starts the periodic wormhole spawn interval (every 30s). */
@@ -885,26 +891,6 @@ class BonusFoodManager {
     this._timers.clear('bonusFoodTimeout');
     this.pos = null;
     return { points: 100, shrinkBy: 0 };
-  }
-
-  /**
-   * Draws the bonus food as a golden diamond shape.
-   * @param {CanvasRenderingContext2D} ctx
-   * @param {number} cellSize Pixel size of each grid cell.
-   */
-  draw(ctx, cellSize) {
-    if (!this._enabled || !this.pos) return;
-    const cx = this.pos.x * cellSize + cellSize / 2;
-    const cy = this.pos.y * cellSize + cellSize / 2;
-    const r = 8;
-    ctx.fillStyle = COLOR_FOOD_BONUS;
-    ctx.beginPath();
-    ctx.moveTo(cx, cy - r);
-    ctx.lineTo(cx + r, cy);
-    ctx.lineTo(cx, cy + r);
-    ctx.lineTo(cx - r, cy);
-    ctx.closePath();
-    ctx.fill();
   }
 
   /**
@@ -1911,8 +1897,28 @@ class SnakeGame {
     this.ctx.fillStyle = COLOR_BG;
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-    this.walls.draw(this.ctx, this.CELL_SIZE);
-    this.wormholes.draw(this.ctx, this.CELL_SIZE);
+    if (this.walls.enabled) {
+      WALLS.forEach((w) => {
+        this.ctx.drawImage(this.tiles.wall, w.x * this.CELL_SIZE, w.y * this.CELL_SIZE, this.CELL_SIZE, this.CELL_SIZE);
+      });
+    }
+
+    if (this.wormholes._enabled && this.wormholes.entry) {
+      this.ctx.drawImage(
+        this.tiles.wormholeEntry,
+        this.wormholes.entry.x * this.CELL_SIZE,
+        this.wormholes.entry.y * this.CELL_SIZE,
+        this.CELL_SIZE,
+        this.CELL_SIZE
+      );
+      this.ctx.drawImage(
+        this.tiles.wormholeExit,
+        this.wormholes.exit.x * this.CELL_SIZE,
+        this.wormholes.exit.y * this.CELL_SIZE,
+        this.CELL_SIZE,
+        this.CELL_SIZE
+      );
+    }
 
     this.snake.forEach((seg, i) => {
       let key = this._getSegmentTileKey(i);
@@ -1932,15 +1938,23 @@ class SnakeGame {
       );
     });
 
-    this.ctx.fillStyle = COLOR_FOOD;
-    this.ctx.fillRect(
-      this.food.x * this.CELL_SIZE + 1,
-      this.food.y * this.CELL_SIZE + 1,
-      this.CELL_SIZE - 2,
-      this.CELL_SIZE - 2
+    this.ctx.drawImage(
+      this.tiles.food,
+      this.food.x * this.CELL_SIZE,
+      this.food.y * this.CELL_SIZE,
+      this.CELL_SIZE,
+      this.CELL_SIZE
     );
 
-    this.bonusFood.draw(this.ctx, this.CELL_SIZE);
+    if (this.bonusFood._enabled && this.bonusFood.pos) {
+      this.ctx.drawImage(
+        this.tiles.bonusFood,
+        this.bonusFood.pos.x * this.CELL_SIZE,
+        this.bonusFood.pos.y * this.CELL_SIZE,
+        this.CELL_SIZE,
+        this.CELL_SIZE
+      );
+    }
 
     if (this.state === STATE.OVER) {
       this.ctx.fillStyle = COLOR_OVERLAY;
@@ -1977,6 +1991,10 @@ class SnakeGame {
     for (const key of boostHeadKeys) {
       this.tiles[`${key}_b`] = this._makeTile(key, PALETTE_BOOST);
     }
+
+    for (const key of STATIC_TILE_KEYS) {
+      this.tiles[key] = this._makeTile(key, PALETTE_NORMAL);
+    }
   }
 
   /**
@@ -1989,6 +2007,7 @@ class SnakeGame {
   _createTileSet(palette, suffix) {
     const set = {};
     for (const key of Object.keys(TILE_RENDERERS)) {
+      if (STATIC_TILE_KEYS.has(key)) continue;
       set[key + suffix] = this._makeTile(key, palette);
     }
     return set;
