@@ -1938,6 +1938,7 @@ class SnakeGame {
   _draw() {
     this.ctx.fillStyle = this.colors.bg;
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    this.ctx.imageSmoothingEnabled = false;
 
     if (this.walls.enabled) {
       WALLS.forEach((w) => {
@@ -2064,11 +2065,9 @@ class SnakeGame {
    */
   _makeTile(key, palette, theme) {
     const canvas = document.createElement('canvas');
-    const size = this.CELL_SIZE + 1;
-    canvas.width = size;
-    canvas.height = size;
+    canvas.width = 26;
+    canvas.height = 26;
     const ctx = canvas.getContext('2d');
-    ctx.scale(size / 26, size / 26);
     TILE_RENDERERS[key](ctx, palette, theme);
     return canvas;
   }
