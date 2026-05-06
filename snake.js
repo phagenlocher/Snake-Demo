@@ -1650,7 +1650,10 @@ class SnakeGame {
     this.messageElement = this.container.querySelector('.snake-message');
     this.overlay = this.container.querySelector('.snake-focus-overlay');
     this.wrapper = this.container.querySelector('.snake-game-wrapper');
-    this._resizeCanvas();
+    this.canvas.width = 500;
+    this.canvas.height = 500;
+    this.CELL_SIZE = 25;
+    this._createTiles();
   }
 
   /**
@@ -1661,6 +1664,7 @@ class SnakeGame {
   _resizeCanvas() {
     const containerEl = this.container.querySelector('.snake-container');
     const availableWidth = containerEl ? containerEl.clientWidth : this.wrapper.parentElement.clientWidth;
+    if (availableWidth < 20) return;
     const cellSize = Math.max(10, Math.floor(availableWidth / this.COLS));
     const canvasSize = cellSize * this.COLS;
     if (canvasSize === this.canvas.width && cellSize === this.CELL_SIZE) return;
@@ -1690,7 +1694,8 @@ class SnakeGame {
     this.canvas.addEventListener('blur', this._onBlur);
     this.overlay.addEventListener('click', this._onClick);
     this._resizeObserver = new ResizeObserver(() => this._resizeCanvas());
-    this._resizeObserver.observe(this.wrapper);
+    this._resizeObserver.observe(this.container);
+    requestAnimationFrame(() => this._resizeCanvas());
   }
 
   /**
@@ -2059,9 +2064,11 @@ class SnakeGame {
    */
   _makeTile(key, palette, theme) {
     const canvas = document.createElement('canvas');
-    canvas.width = this.CELL_SIZE + 1;
-    canvas.height = this.CELL_SIZE + 1;
+    const size = this.CELL_SIZE + 1;
+    canvas.width = size;
+    canvas.height = size;
     const ctx = canvas.getContext('2d');
+    ctx.scale(size / 26, size / 26);
     TILE_RENDERERS[key](ctx, palette, theme);
     return canvas;
   }
