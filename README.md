@@ -1,5 +1,7 @@
 # Snake Demo
 
+**Play it here**: [phagenlocher.github.io/Snake-Demo](https://phagenlocher.github.io/Snake-Demo)
+
 A vanilla HTML/CSS/JS Snake game designed as a **teaching tool for game design**. Each feature lives behind a toggle, so you can turn mechanics on and off to see how they affect gameplay.
 
 Open `index.html` in any browser to play.
