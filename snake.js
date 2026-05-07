@@ -14,15 +14,15 @@ You should have received a copy of the CC0 Public Domain Dedication along with t
  */
 
 /**
- * A palette of colors for a snake segment.
- * @typedef {{body: string, head: string, eye: string}} Palette
+ * A flat colors object holding all color properties needed by tile renderers.
+ * @typedef {{body: string, head: string, eye: string, bg: string, wallBody: string, wallEdgeLight: string, wallEdgeDark: string, food: string, foodBonus: string, wormholeEntry: string, wormholeExit: string, overlay: string, overlayText: string}} Colors
  */
 
 /**
  * A tile renderer callback.
  * @callback TileRenderer
  * @param {CanvasRenderingContext2D} ctx
- * @param {Palette} palette
+ * @param {Colors} colors
  */
 
 /**
@@ -103,7 +103,7 @@ const STATE_TRANSITIONS = Object.freeze({
   [STATE.OVER]: [STATE.WAITING],
 });
 
-/** @type {Object} Default theme. */
+/** @type {Object} Default colors. */
 const THEME_DEFAULT = {
   bg: '#0d1a0d',
   wallBody: '#555555',
@@ -212,80 +212,80 @@ const CORNER_MAP = {
 
 /** @type {Object<string, TileRenderer>} Tile shape drawing functions keyed by shape name. */
 const TILE_RENDERERS = {
-  headUp(ctx, p) {
-    ctx.fillStyle = p.body;
+  headUp(ctx, colors) {
+    ctx.fillStyle = colors.body;
     ctx.fillRect(0, 0, 26, 26);
-    ctx.fillStyle = p.head;
+    ctx.fillStyle = colors.head;
     ctx.fillRect(3, 3, 20, 20);
-    ctx.fillStyle = p.eye;
+    ctx.fillStyle = colors.eye;
     ctx.fillRect(5, 4, 5, 4);
     ctx.fillRect(16, 4, 5, 4);
   },
-  headDown(ctx, p) {
-    ctx.fillStyle = p.body;
+  headDown(ctx, colors) {
+    ctx.fillStyle = colors.body;
     ctx.fillRect(0, 0, 26, 26);
-    ctx.fillStyle = p.head;
+    ctx.fillStyle = colors.head;
     ctx.fillRect(3, 3, 20, 20);
-    ctx.fillStyle = p.eye;
+    ctx.fillStyle = colors.eye;
     ctx.fillRect(5, 18, 5, 4);
     ctx.fillRect(16, 18, 5, 4);
   },
-  headLeft(ctx, p) {
-    ctx.fillStyle = p.body;
+  headLeft(ctx, colors) {
+    ctx.fillStyle = colors.body;
     ctx.fillRect(0, 0, 26, 26);
-    ctx.fillStyle = p.head;
+    ctx.fillStyle = colors.head;
     ctx.fillRect(3, 3, 20, 20);
-    ctx.fillStyle = p.eye;
+    ctx.fillStyle = colors.eye;
     ctx.fillRect(4, 5, 4, 5);
     ctx.fillRect(4, 16, 4, 5);
   },
-  headRight(ctx, p) {
-    ctx.fillStyle = p.body;
+  headRight(ctx, colors) {
+    ctx.fillStyle = colors.body;
     ctx.fillRect(0, 0, 26, 26);
-    ctx.fillStyle = p.head;
+    ctx.fillStyle = colors.head;
     ctx.fillRect(3, 3, 20, 20);
-    ctx.fillStyle = p.eye;
+    ctx.fillStyle = colors.eye;
     ctx.fillRect(18, 5, 4, 5);
     ctx.fillRect(18, 16, 4, 5);
   },
-  bodyHoriz(ctx, p) {
-    ctx.fillStyle = p.body;
+  bodyHoriz(ctx, colors) {
+    ctx.fillStyle = colors.body;
     ctx.fillRect(0, 0, 26, 26);
   },
-  bodyVert(ctx, p) {
-    ctx.fillStyle = p.body;
+  bodyVert(ctx, colors) {
+    ctx.fillStyle = colors.body;
     ctx.fillRect(0, 0, 26, 26);
   },
-  tailUp(ctx, p) {
-    ctx.fillStyle = p.body;
+  tailUp(ctx, colors) {
+    ctx.fillStyle = colors.body;
     ctx.fillRect(0, 13, 26, 13);
     ctx.beginPath();
     ctx.arc(13, 13, 13, Math.PI, 2 * Math.PI);
     ctx.fill();
   },
-  tailDown(ctx, p) {
-    ctx.fillStyle = p.body;
+  tailDown(ctx, colors) {
+    ctx.fillStyle = colors.body;
     ctx.fillRect(0, 0, 26, 13);
     ctx.beginPath();
     ctx.arc(13, 13, 13, 0, Math.PI);
     ctx.fill();
   },
-  tailLeft(ctx, p) {
-    ctx.fillStyle = p.body;
+  tailLeft(ctx, colors) {
+    ctx.fillStyle = colors.body;
     ctx.fillRect(13, 0, 13, 26);
     ctx.beginPath();
     ctx.arc(13, 13, 13, Math.PI / 2, (3 * Math.PI) / 2);
     ctx.fill();
   },
-  tailRight(ctx, p) {
-    ctx.fillStyle = p.body;
+  tailRight(ctx, colors) {
+    ctx.fillStyle = colors.body;
     ctx.fillRect(0, 0, 13, 26);
     ctx.beginPath();
     ctx.arc(13, 13, 13, -Math.PI / 2, Math.PI / 2);
     ctx.fill();
   },
-  cornerRD(ctx, p) {
-    ctx.fillStyle = p.body;
+  cornerRD(ctx, colors) {
+    ctx.fillStyle = colors.body;
     ctx.fillRect(0, 0, 13, 13);
     ctx.fillRect(0, 13, 13, 13);
     ctx.fillRect(13, 13, 13, 13);
@@ -295,8 +295,8 @@ const TILE_RENDERERS = {
     ctx.closePath();
     ctx.fill();
   },
-  cornerLD(ctx, p) {
-    ctx.fillStyle = p.body;
+  cornerLD(ctx, colors) {
+    ctx.fillStyle = colors.body;
     ctx.fillRect(13, 0, 13, 13);
     ctx.fillRect(0, 13, 13, 13);
     ctx.fillRect(13, 13, 13, 13);
@@ -306,8 +306,8 @@ const TILE_RENDERERS = {
     ctx.closePath();
     ctx.fill();
   },
-  cornerRU(ctx, p) {
-    ctx.fillStyle = p.body;
+  cornerRU(ctx, colors) {
+    ctx.fillStyle = colors.body;
     ctx.fillRect(0, 0, 13, 13);
     ctx.fillRect(13, 0, 13, 13);
     ctx.fillRect(0, 13, 13, 13);
@@ -317,8 +317,8 @@ const TILE_RENDERERS = {
     ctx.closePath();
     ctx.fill();
   },
-  cornerLU(ctx, p) {
-    ctx.fillStyle = p.body;
+  cornerLU(ctx, colors) {
+    ctx.fillStyle = colors.body;
     ctx.fillRect(0, 0, 13, 13);
     ctx.fillRect(13, 0, 13, 13);
     ctx.fillRect(13, 13, 13, 13);
@@ -328,30 +328,30 @@ const TILE_RENDERERS = {
     ctx.closePath();
     ctx.fill();
   },
-  wall(ctx, _p, theme) {
-    ctx.fillStyle = theme.wallBody;
+  wall(ctx, colors) {
+    ctx.fillStyle = colors.wallBody;
     ctx.fillRect(0, 0, 26, 26);
-    ctx.fillStyle = theme.wallEdgeLight;
+    ctx.fillStyle = colors.wallEdgeLight;
     ctx.fillRect(0, 0, 25, 1);
     ctx.fillRect(0, 0, 1, 25);
-    ctx.fillStyle = theme.wallEdgeDark;
+    ctx.fillStyle = colors.wallEdgeDark;
     ctx.fillRect(25, 0, 1, 26);
     ctx.fillRect(0, 25, 26, 1);
   },
-  food(ctx, _p, theme) {
+  food(ctx, colors) {
     const cx = 13;
     const cy = 13;
     const r = 10;
-    ctx.fillStyle = theme.food;
+    ctx.fillStyle = colors.food;
     ctx.beginPath();
     ctx.arc(cx, cy, r, 0, Math.PI * 2);
     ctx.fill();
   },
-  bonusFood(ctx, _p, theme) {
+  bonusFood(ctx, colors) {
     const cx = 13;
     const cy = 13;
     const r = 8;
-    ctx.fillStyle = theme.foodBonus;
+    ctx.fillStyle = colors.foodBonus;
     ctx.beginPath();
     ctx.moveTo(cx, cy - r);
     ctx.lineTo(cx + r, cy);
@@ -360,12 +360,12 @@ const TILE_RENDERERS = {
     ctx.closePath();
     ctx.fill();
   },
-  wormholeEntry(ctx, _p, theme) {
-    ctx.fillStyle = theme.wormholeEntry;
+  wormholeEntry(ctx, colors) {
+    ctx.fillStyle = colors.wormholeEntry;
     ctx.fillRect(1, 1, 23, 23);
   },
-  wormholeExit(ctx, _p, theme) {
-    ctx.fillStyle = theme.wormholeExit;
+  wormholeExit(ctx, colors) {
+    ctx.fillStyle = colors.wormholeExit;
     ctx.fillRect(1, 1, 23, 23);
   },
 };
@@ -2065,26 +2065,27 @@ class SnakeGame {
 
     const boostHeadKeys = ['headUp', 'headDown', 'headLeft', 'headRight'];
     for (const key of boostHeadKeys) {
-      this.tiles[`${key}_b`] = this._makeTile(key, this.colors.paletteBoost);
+      this.tiles[`${key}_b`] = this._makeTile(key, { ...this.colors, ...this.colors.paletteBoost });
     }
 
     for (const key of STATIC_TILE_KEYS) {
-      this.tiles[key] = this._makeTile(key, this.colors.paletteNormal, this.colors);
+      this.tiles[key] = this._makeTile(key, { ...this.colors, ...this.colors.paletteNormal });
     }
   }
 
   /**
    * Creates a set of tiles for a given palette and suffix.
    * @private
-   * @param {Palette} palette The palette to render with.
+   * @param {Colors} palette Palette with body/head/eye properties.
    * @param {string} suffix Key suffix (e.g. '', '_w', '_i').
    * @returns {Object<string, HTMLCanvasElement>}
    */
   _createTileSet(palette, suffix) {
     const set = {};
+    const colors = { ...this.colors, ...palette };
     for (const key of Object.keys(TILE_RENDERERS)) {
       if (STATIC_TILE_KEYS.has(key)) continue;
-      set[key + suffix] = this._makeTile(key, palette);
+      set[key + suffix] = this._makeTile(key, colors);
     }
     return set;
   }
@@ -2093,15 +2094,15 @@ class SnakeGame {
    * Creates a single off-screen canvas tile and draws the given renderer on it.
    * @private
    * @param {string} key Tile shape key (e.g. 'headUp', 'bodyHoriz').
-   * @param {Palette} palette The palette to render with.
+   * @param {Colors} colors Colors object holding all needed properties.
    * @returns {HTMLCanvasElement}
    */
-  _makeTile(key, palette, theme) {
+  _makeTile(key, colors) {
     const canvas = document.createElement('canvas');
     canvas.width = 26;
     canvas.height = 26;
     const ctx = canvas.getContext('2d');
-    TILE_RENDERERS[key](ctx, palette, theme);
+    TILE_RENDERERS[key](ctx, colors);
     return canvas;
   }
 
