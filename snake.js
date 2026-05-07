@@ -157,6 +157,21 @@ const BONUS_FOOD_SPAWN_INTERVAL_MS = 15000;
 /** @const {number} Score bonus decay interval in ms. */
 const SCORE_BONUS_DECAY_INTERVAL_MS = 200;
 
+/** @const {string} Focus overlay placeholder text. */
+const MSG_CLICK_OR_TAP_TO_FOCUS = 'Click or tap to focus';
+/** @const {string} Initial instruction shown before the game starts. */
+const MSG_PRESS_ARROW_KEY_TO_START = 'Press any arrow key to start';
+/** @const {string} Prompt displayed after game reset. */
+const MSG_USE_ARROW_KEYS_TO_START = 'Use arrow keys or swipe to start';
+/** @const {string} Game-over overlay heading drawn on the canvas. */
+const MSG_GAME_OVER_OVERLAY = 'GAME OVER';
+/** @const {string} Game-over instruction below the canvas. */
+const MSG_GAME_OVER_RESTART = 'Game Over! Press Space or tap to restart';
+/** @const {string} Constrictor ignored-state prompt. */
+const MSG_SNAKE_STUCK = 'Snake stuck \u2014 press a safe direction';
+/** @const {string} Pause overlay text shown on blur. */
+const MSG_PAUSED_RESUME = 'Paused \u2014 Click or tap to resume';
+
 /**
  * Computes the grid direction from point a to point b.
  * If wrap is enabled and the distance exceeds 1 cell (e.g. snake wraps around),
@@ -1653,8 +1668,8 @@ class SnakeGame {
           ${this.scoreBonus.getHUDHtml()}
           <span class="snake-timer">Time: 0:00</span>
         </div>
-        <div class="snake-game-wrapper"><canvas class="snake-canvas" tabindex="0"></canvas><div class="snake-focus-overlay">Click or tap to focus</div></div>
-        <div class="snake-message">Press any arrow key to start</div>
+        <div class="snake-game-wrapper"><canvas class="snake-canvas" tabindex="0"></canvas><div class="snake-focus-overlay">${MSG_CLICK_OR_TAP_TO_FOCUS}</div></div>
+        <div class="snake-message">${MSG_PRESS_ARROW_KEY_TO_START}</div>
       </div>
     `;
 
@@ -1769,8 +1784,8 @@ class SnakeGame {
     if (this.bonusElement) {
       this.bonusElement.textContent = 'Bonus: 100';
     }
-    this.messageElement.textContent = 'Use arrow keys or swipe to start';
-    this.overlay.textContent = 'Click or tap to focus';
+    this.messageElement.textContent = MSG_USE_ARROW_KEYS_TO_START;
+    this.overlay.textContent = MSG_CLICK_OR_TAP_TO_FOCUS;
     this._placeFood();
     this._draw();
   }
@@ -2024,7 +2039,7 @@ class SnakeGame {
       this.ctx.font = `bold ${Math.max(16, Math.round(this.CELL_SIZE * 1.28))}px Courier New`;
       this.ctx.textAlign = 'center';
       this.ctx.textBaseline = 'middle';
-      this.ctx.fillText('GAME OVER', this.canvas.width / 2, this.canvas.height / 2 - 20);
+      this.ctx.fillText(MSG_GAME_OVER_OVERLAY, this.canvas.width / 2, this.canvas.height / 2 - 20);
       this.ctx.font = `${Math.max(12, Math.round(this.CELL_SIZE * 0.96))}px Courier New`;
       this.ctx.fillText(`Score: ${this.score}`, this.canvas.width / 2, this.canvas.height / 2 + 20);
     }
@@ -2312,7 +2327,7 @@ class SnakeGame {
     this.input.resetBoost();
     this._transitionTo(STATE.IGNORED);
     this.input.clearBuffer();
-    this.messageElement.textContent = 'Snake stuck \u2014 press a safe direction';
+    this.messageElement.textContent = MSG_SNAKE_STUCK;
     this._draw();
   }
 
@@ -2345,7 +2360,7 @@ class SnakeGame {
   _gameOver() {
     this._clearAllTimers();
     this._transitionTo(STATE.OVER);
-    this.messageElement.textContent = 'Game Over! Press Space or tap to restart';
+    this.messageElement.textContent = MSG_GAME_OVER_RESTART;
     this._draw();
   }
 
@@ -2361,7 +2376,7 @@ class SnakeGame {
     if (this.state === STATE.WARNING) {
       this.warningElapsed = Date.now() - this.warningStart;
     }
-    this.overlay.textContent = 'Paused \u2014 Click or tap to resume';
+    this.overlay.textContent = MSG_PAUSED_RESUME;
   }
 
   /**
@@ -2396,7 +2411,7 @@ class SnakeGame {
       this.bonusFood.startTimers();
       this.wormholes.startTimers();
     }
-    this.overlay.textContent = 'Click or tap to focus';
+    this.overlay.textContent = MSG_CLICK_OR_TAP_TO_FOCUS;
   }
 
   /**
