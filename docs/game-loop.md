@@ -38,13 +38,28 @@ Each regular food eaten triggers `onFoodEaten()` which recalculates `currentSpee
 
 ## Pause / Resume
 
-Canvas `focus`/`blur` events trigger pause and resume:
+Focus loss is detected through three complementary mechanisms to work reliably on both desktop and mobile:
 
-- **Pause** (`_pauseGame()`): Stops the rAF loop and clears all timers. If in `warning` state, saves remaining warning time. Shows pause overlay. rAF also auto-pauses in background tabs as an additional safety net.
-- **Resume** (`_resumeGame()`): Restores per-state timers:
-  - `playing`: Starts the rAF loop, timer interval display, bonus food and wormhole timers
+1. **Canvas blur** — fires when the canvas loses keyboard focus (desktop)
+2. **`document.visibilitychange`** — fires when the browser tab or app is backgrounded (mobile and desktop)
+3. **Touch outside game wrapper** — `touchstart`/`mousedown` on `document` whose target is not inside `.snake-game-wrapper` (mobile)
+
+When any of these triggers fire while the game is in `playing`, `warning`, or `ignored` state, `_enterUnfocused()` is called:
+
+- Stores the current state in `_previousState`
+- Transitions to `unfocused`
+- Stops the rAF loop and clears all timers
+- Saves `warningElapsed` if the previous state was `warning`
+- Shows the pause overlay with "Paused — Click or tap to resume"
+
+When the user taps or clicks the overlay (or the canvas regains focus), `_exitUnfocused()` is called:
+
+- Transitions back to `_previousState`
+- Restores all timers appropriate for that state:
+  - `playing`: Starts the rAF loop, timer interval, bonus food and wormhole timers
   - `warning`: Reschedules warning countdown with remaining time, restarts timer display
   - `ignored`: Restarts timer display, bonus food, and wormhole timers
+- Hides the overlay and clears `_previousState`
 
 Bonus food movement interval and score bonus decay resume with their remaining state (not reset).
 

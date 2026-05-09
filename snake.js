@@ -91,15 +91,17 @@ const STATE = Object.freeze({
   PLAYING: 'playing',
   WARNING: 'warning',
   IGNORED: 'ignored',
+  UNFOCUSED: 'unfocused',
   OVER: 'over',
 });
 
 /** @type {Object<string, string[]>} Valid transitions for each state. */
 const STATE_TRANSITIONS = Object.freeze({
   [STATE.WAITING]: [STATE.PLAYING],
-  [STATE.PLAYING]: [STATE.WARNING, STATE.IGNORED, STATE.OVER],
-  [STATE.WARNING]: [STATE.PLAYING, STATE.OVER],
-  [STATE.IGNORED]: [STATE.PLAYING],
+  [STATE.PLAYING]: [STATE.WARNING, STATE.IGNORED, STATE.OVER, STATE.UNFOCUSED],
+  [STATE.WARNING]: [STATE.PLAYING, STATE.OVER, STATE.UNFOCUSED],
+  [STATE.IGNORED]: [STATE.PLAYING, STATE.UNFOCUSED],
+  [STATE.UNFOCUSED]: [STATE.PLAYING, STATE.WARNING, STATE.IGNORED],
   [STATE.OVER]: [STATE.WAITING],
 });
 
@@ -1220,8 +1222,9 @@ class InputManager {
    * @param {TouchEvent} e
    */
   _onTouchStart(e) {
-    if (this._getState() === STATE.OVER) return;
-    if (this._getState() !== STATE.WAITING) {
+    const state = this._getState();
+    if (state === STATE.OVER || state === STATE.UNFOCUSED) return;
+    if (state !== STATE.WAITING) {
       e.preventDefault();
     }
     this._touchSwipeStart = {
@@ -1236,7 +1239,8 @@ class InputManager {
    * @param {TouchEvent} e
    */
   _onTouchMove(e) {
-    if (this._getState() === STATE.OVER) return;
+    const state = this._getState();
+    if (state === STATE.OVER || state === STATE.UNFOCUSED) return;
     e.preventDefault();
   }
 
@@ -1247,6 +1251,7 @@ class InputManager {
    */
   _onTouchEnd(e) {
     if (!this._touchSwipeStart) return;
+    if (this._getState() === STATE.UNFOCUSED) return;
     const t = e.changedTouches[0];
     const dx = t.clientX - this._touchSwipeStart.x;
     const dy = t.clientY - this._touchSwipeStart.y;
@@ -1704,25 +1709,48 @@ class SnakeGame {
   }
 
   /**
-   * Binds focus, blur, overlay-click, and resize event listeners.
+   * Binds focus, blur, overlay-click, visibility change, outside-click, and resize event listeners.
    * @private
    */
   _bindEvents() {
     this._onFocus = () => {
       this.overlay.classList.add('snake-hidden');
-      this._resumeGame();
+      if (this.state === STATE.UNFOCUSED) {
+        this._exitUnfocused();
+      }
     };
     this._onBlur = () => {
-      this.overlay.classList.remove('snake-hidden');
-      this._pauseGame();
+      this._enterUnfocused();
+    };
+    this._onVisibilityChange = () => {
+      if (document.hidden) {
+        this._enterUnfocused();
+      } else if (this.state === STATE.UNFOCUSED) {
+        this._exitUnfocused();
+      }
+    };
+    this._onOutsideTouch = (e) => {
+      if (this.state === STATE.UNFOCUSED) return;
+      const target = e.target;
+      if (!this.wrapper.contains(target)) {
+        this._enterUnfocused();
+      }
     };
     this._onClick = () => {
-      this.canvas.focus();
-      if (this.state === STATE.OVER) this.init();
+      if (this.state === STATE.OVER) {
+        this.init();
+      } else if (this.state === STATE.UNFOCUSED) {
+        this._exitUnfocused();
+      } else {
+        this.canvas.focus();
+      }
     };
 
     this.canvas.addEventListener('focus', this._onFocus);
     this.canvas.addEventListener('blur', this._onBlur);
+    document.addEventListener('visibilitychange', this._onVisibilityChange);
+    document.addEventListener('touchstart', this._onOutsideTouch, { passive: true });
+    document.addEventListener('mousedown', this._onOutsideTouch);
     this.overlay.addEventListener('click', this._onClick);
     this._resizeObserver = new ResizeObserver(() => this._resizeCanvas());
     this._resizeObserver.observe(this.container);
@@ -1736,6 +1764,9 @@ class SnakeGame {
   destroy() {
     this.canvas.removeEventListener('focus', this._onFocus);
     this.canvas.removeEventListener('blur', this._onBlur);
+    document.removeEventListener('visibilitychange', this._onVisibilityChange);
+    document.removeEventListener('touchstart', this._onOutsideTouch);
+    document.removeEventListener('mousedown', this._onOutsideTouch);
     this.overlay.removeEventListener('click', this._onClick);
     this._resizeObserver.disconnect();
     this.input.destroy();
@@ -1762,6 +1793,7 @@ class SnakeGame {
     this.foodsEaten = 0;
     this.scoreBonus.value = 100;
     this.wasPaused = false;
+    this._previousState = null;
     this.input.speedBoostActive = false;
     this.input.buffer = [];
     this.input.direction = { x: 0, y: 0 };
@@ -2447,6 +2479,63 @@ class SnakeGame {
   }
 
   /**
+   * Enters the unfocused state. Stores the current state, stops all activity,
+   * and shows the pause overlay.
+   * @private
+   */
+  _enterUnfocused() {
+    if (this.state !== STATE.PLAYING && this.state !== STATE.WARNING && this.state !== STATE.IGNORED) return;
+    this._previousState = this.state;
+    this._transitionTo(STATE.UNFOCUSED);
+    this._stopLoop();
+    this._clearAllTimers();
+    if (this._previousState === STATE.WARNING) {
+      this.warningElapsed = Date.now() - this.warningStart;
+    }
+    this.overlay.textContent = MSG_PAUSED_RESUME;
+    this.overlay.classList.remove('snake-hidden');
+  }
+
+  /**
+   * Exits the unfocused state. Restores the previous state and resumes all
+   * timers and the game loop.
+   * @private
+   */
+  _exitUnfocused() {
+    if (this.state !== STATE.UNFOCUSED || !this._previousState) return;
+    const restoredState = this._previousState;
+    this._previousState = null;
+    this.overlay.classList.add('snake-hidden');
+    this._transitionTo(restoredState);
+    if (restoredState === STATE.PLAYING) {
+      this.startTime = Date.now() - this.elapsed;
+      this._startLoop(performance.now());
+      this.timers.setInterval('timerInterval', () => this._updateTimerDisplay(), 1000);
+      this._resumeCommonTimers();
+      this.bonusFood.startTimers();
+      this.wormholes.startTimers();
+    } else if (restoredState === STATE.WARNING) {
+      const warningDuration = this.input.speedBoostActive
+        ? WARNING_TIMEOUT_MS / SPEED_BOOST_FACTOR
+        : WARNING_TIMEOUT_MS;
+      this.timers.setTimeout(
+        'warningTimeout',
+        () => this._gameOver(),
+        Math.max(0, warningDuration - this.warningElapsed)
+      );
+      this.timers.setInterval('timerInterval', () => this._updateTimerDisplay(), 1000);
+      this._resumeCommonTimers();
+    } else if (restoredState === STATE.IGNORED) {
+      this.timers.setInterval('timerInterval', () => this._updateTimerDisplay(), 1000);
+      this._resumeCommonTimers();
+      this.bonusFood.startTimers();
+      this.wormholes.startTimers();
+    }
+    this.canvas.focus();
+    this.overlay.textContent = MSG_CLICK_OR_TAP_TO_FOCUS;
+  }
+
+  /**
    * Routes a cardinal direction input (from keyboard or swipe) to the
    * appropriate state-specific handler.
    * @private
@@ -2465,6 +2554,8 @@ class SnakeGame {
         break;
       case STATE.PLAYING:
         this._handleInputPlaying(dir);
+        break;
+      case STATE.UNFOCUSED:
         break;
     }
   }
