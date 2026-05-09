@@ -164,7 +164,7 @@ const MSG_CLICK_OR_TAP_TO_FOCUS = 'Click or tap to focus';
 /** @const {string} Initial instruction shown before the game starts. */
 const MSG_PRESS_ARROW_KEY_TO_START = 'Press any arrow key to start';
 /** @const {string} Prompt displayed after game reset. */
-const MSG_USE_ARROW_KEYS_TO_START = 'Use arrow keys or swipe to start';
+const MSG_USE_ARROW_KEYS_TO_START = 'Use arrow keys or tap to start';
 /** @const {string} Game-over overlay heading drawn on the canvas. */
 const MSG_GAME_OVER_OVERLAY = 'GAME OVER';
 /** @const {string} Game-over instruction below the canvas. */
@@ -1138,16 +1138,11 @@ class InputManager {
     this._wrapper = wrapper;
 
     this._boundKeydown = this._onKeydown.bind(this);
-    this._boundTouchStart = this._onTouchStart.bind(this);
-    this._boundTouchMove = this._onTouchMove.bind(this);
-    this._boundTouchEnd = this._onTouchEnd.bind(this);
-    this._boundCanvasClick = this._onCanvasClick.bind(this);
+    this._boundCanvasTap = this._onCanvasTap.bind(this);
 
     this._canvas.addEventListener('keydown', this._boundKeydown);
-    this._wrapper.addEventListener('touchstart', this._boundTouchStart, { passive: false });
-    this._wrapper.addEventListener('touchmove', this._boundTouchMove, { passive: false });
-    this._wrapper.addEventListener('touchend', this._boundTouchEnd, { passive: false });
-    this._canvas.addEventListener('click', this._boundCanvasClick);
+    this._canvas.addEventListener('click', this._boundCanvasTap);
+    this._canvas.addEventListener('touchend', this._boundCanvasTap, { passive: false });
   }
 
   /**
@@ -1156,12 +1151,8 @@ class InputManager {
   destroy() {
     if (this._canvas) {
       this._canvas.removeEventListener('keydown', this._boundKeydown);
-      this._canvas.removeEventListener('click', this._boundCanvasClick);
-    }
-    if (this._wrapper) {
-      this._wrapper.removeEventListener('touchstart', this._boundTouchStart);
-      this._wrapper.removeEventListener('touchmove', this._boundTouchMove);
-      this._wrapper.removeEventListener('touchend', this._boundTouchEnd);
+      this._canvas.removeEventListener('click', this._boundCanvasTap);
+      this._canvas.removeEventListener('touchend', this._boundCanvasTap);
     }
   }
 
@@ -1201,61 +1192,47 @@ class InputManager {
    * providing a mobile-friendly alternative to the spacebar.
    * @private
    */
-  _onCanvasClick() {
-    if (this._getState() === STATE.OVER) {
-      this._onRestart();
-    }
-  }
-
   /**
-   * Minimum pixel distance a touch must travel to register as a swipe.
+   * Minimum pixel distance from canvas center a tap must be to register as a direction input.
    * @private
    * @returns {number}
    */
-  static get TOUCH_SWIPE_THRESHOLD() {
-    return 30;
+  static get TOUCH_TAP_THRESHOLD() {
+    return 20;
   }
 
   /**
-   * Records the starting position of a touch for swipe detection.
+   * Handles canvas click/tap events. Determines direction based on which side
+   * of the canvas was tapped relative to center. For diagonal taps, the axis
+   * with the larger absolute offset from center wins. Restarts the game when
+   * in the OVER state.
    * @private
-   * @param {TouchEvent} e
+   * @param {TouchEvent|MouseEvent} e
    */
-  _onTouchStart(e) {
+  _onCanvasTap(e) {
     const state = this._getState();
-    if (state === STATE.OVER || state === STATE.UNFOCUSED) return;
-    if (state !== STATE.WAITING) {
-      e.preventDefault();
+    if (state === STATE.UNFOCUSED) return;
+
+    if (state === STATE.OVER) {
+      this._onRestart();
+      return;
     }
-    this._touchSwipeStart = {
-      x: e.touches[0].clientX,
-      y: e.touches[0].clientY,
-    };
-  }
 
-  /**
-   * Prevents page scrolling during game play.
-   * @private
-   * @param {TouchEvent} e
-   */
-  _onTouchMove(e) {
-    const state = this._getState();
-    if (state === STATE.OVER || state === STATE.UNFOCUSED) return;
     e.preventDefault();
-  }
 
-  /**
-   * Detects a swipe direction and routes it to the game input pipeline.
-   * @private
-   * @param {TouchEvent} e
-   */
-  _onTouchEnd(e) {
-    if (!this._touchSwipeStart) return;
-    if (this._getState() === STATE.UNFOCUSED) return;
-    const t = e.changedTouches[0];
-    const dx = t.clientX - this._touchSwipeStart.x;
-    const dy = t.clientY - this._touchSwipeStart.y;
-    if (Math.abs(dx) < InputManager.TOUCH_SWIPE_THRESHOLD && Math.abs(dy) < InputManager.TOUCH_SWIPE_THRESHOLD) return;
+    const touch = e.changedTouches ? e.changedTouches[0] : e;
+    const rect = this._canvas.getBoundingClientRect();
+
+    const tapX = (touch.clientX - rect.left) * (this._canvas.width / rect.width);
+    const tapY = (touch.clientY - rect.top) * (this._canvas.height / rect.height);
+
+    const centerX = this._canvas.width / 2;
+    const centerY = this._canvas.height / 2;
+
+    const dx = tapX - centerX;
+    const dy = tapY - centerY;
+
+    if (Math.abs(dx) < InputManager.TOUCH_TAP_THRESHOLD && Math.abs(dy) < InputManager.TOUCH_TAP_THRESHOLD) return;
 
     const dir = Math.abs(dx) > Math.abs(dy) ? { x: dx > 0 ? 1 : -1, y: 0 } : { x: 0, y: dy > 0 ? 1 : -1 };
 
@@ -2536,7 +2513,7 @@ class SnakeGame {
   }
 
   /**
-   * Routes a cardinal direction input (from keyboard or swipe) to the
+   * Routes a cardinal direction input (from keyboard or tap) to the
    * appropriate state-specific handler.
    * @private
    * @param {Point} dir

@@ -1,14 +1,14 @@
 # Input Handling
 
-All input flows through `InputManager`, which supports keyboard, touch/swipe, buffering, speed boost, and instant movement.
+All input flows through `InputManager`, which supports keyboard, touch/tap, buffering, speed boost, and instant movement.
 
 ## Keyboard
 
 Arrow keys map to cardinal directions. Space restarts from the `over` state. Input is ignored when focus is on form elements (`<input>`, `<select>`, etc.).
 
-## Touch / Swipe
+## Touch / Tap
 
-Touch events on the game wrapper detect swipes with a 30px threshold. The dominant axis (horizontal or vertical) determines the direction. Page scrolling is prevented during gameplay.
+Touch events on the canvas detect taps. The canvas is divided into four directional zones relative to its center. Tapping on the left, right, top, or bottom half sets the corresponding direction. When a tap is diagonal (not clearly in one half), the axis with the larger absolute distance from center determines the direction — e.g., a tap in the top-right quadrant that is farther right than up results in a right direction. Taps very close to the center (within 20px) are ignored. The same tap also restarts the game when in the game over state.
 
 ## State-Based Routing
 
