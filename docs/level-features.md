@@ -20,7 +20,7 @@ Teleport entry/exit pair that appears periodically.
 - **Teleport**: Snake head stepping onto the entry cell instantly appears at the exit, continuing in the same direction. Both wormholes are consumed.
 - **Collision**: If the exit cell is occupied by the snake's body, normal collision rules apply (grace period or game over).
 - **Constrictor**: Wormhole cells do not block flood-fill enclosure checks. Teleport fires before constrictor-specific head-food logic.
-- **Placement**: Entry and exit avoid snake body, food, bonus food, and wall cells.
+- **Placement**: Entry and exit avoid snake body, food, bonus food, and wall cells. Regular and bonus food also avoid wormhole entry cells (but may spawn on exit cells).
 
 When disabled, no wormholes spawn; rendering, timers, and teleport checks are skipped.
 

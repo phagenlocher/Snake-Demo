@@ -767,6 +767,7 @@ class BonusFoodManager {
    *   timers: TimerManager,
    *   getCurrentSpeed: () => number,
    *   isFoodEnclosed: (p: Point) => boolean,
+   *   isWormholeEntryAt: (x: number, y: number) => boolean,
    *   onEatCallback: () => void,
    * }} deps
    */
@@ -787,6 +788,7 @@ class BonusFoodManager {
     timers,
     getCurrentSpeed,
     isFoodEnclosed,
+    isWormholeEntryAt,
     onEatCallback,
   }) {
     this._enabled = enabled;
@@ -805,6 +807,7 @@ class BonusFoodManager {
     this._timers = timers;
     this._getCurrentSpeed = getCurrentSpeed;
     this._isFoodEnclosed = isFoodEnclosed;
+    this._isWormholeEntryAt = isWormholeEntryAt;
     this._onEatCallback = onEatCallback;
     /** @type {Point|null} Current bonus food position. */
     this.pos = null;
@@ -837,7 +840,8 @@ class BonusFoodManager {
     } while (
       this._snakeHas(pos.x, pos.y) ||
       (this._getFoodPos() && this._getFoodPos().x === pos.x && this._getFoodPos().y === pos.y) ||
-      this._isWallAt(pos.x, pos.y)
+      this._isWallAt(pos.x, pos.y) ||
+      this._isWormholeEntryAt(pos.x, pos.y)
     );
     this.pos = pos;
     this._timers.setInterval('bonusFoodInterval', () => this._move(), this._getCurrentSpeed() + 60);
@@ -867,7 +871,7 @@ class BonusFoodManager {
     ];
     const dir = dirs[Math.floor(Math.random() * dirs.length)];
     const next = { x: this.pos.x + dir.x, y: this.pos.y + dir.y };
-    const obstacleFree = () => !this._snakeHas(next.x, next.y) && !this._isWallAt(next.x, next.y);
+    const obstacleFree = () => !this._snakeHas(next.x, next.y) && !this._isWallAt(next.x, next.y) && !this._isWormholeEntryAt(next.x, next.y);
     if (this._wrapEnabled) {
       this._wrap(next);
       if (obstacleFree()) {
@@ -1585,6 +1589,8 @@ class SnakeGame {
       timers: this.timers,
       getCurrentSpeed: () => this.speed.currentSpeed,
       isFoodEnclosed: (p) => this._isFoodEnclosed(p),
+      isWormholeEntryAt: (x, y) =>
+        this.wormholes.entry !== null && this.wormholes.entry.x === x && this.wormholes.entry.y === y,
       onEatCallback: () => this._eatBonusFood(),
     });
     /** @type {ScoreBonusManager} */
@@ -1812,6 +1818,7 @@ class SnakeGame {
     } while (
       this.snake.has(pos.x, pos.y) ||
       this.walls.isWallAt(pos.x, pos.y) ||
+      (this.wormholes.entry && pos.x === this.wormholes.entry.x && pos.y === this.wormholes.entry.y) ||
       (isConstrictor && tries < maxTries && this._isFoodEnclosed(pos))
     );
     if (isConstrictor && this._isFoodEnclosed(pos)) {
@@ -1832,7 +1839,11 @@ class SnakeGame {
   _findAnyFreeTile() {
     for (let y = 0; y < this.ROWS; y++) {
       for (let x = 0; x < this.COLS; x++) {
-        if (!this.snake.has(x, y) && !this.walls.isWallAt(x, y)) {
+        if (
+          !this.snake.has(x, y) &&
+          !this.walls.isWallAt(x, y) &&
+          !(this.wormholes.entry && x === this.wormholes.entry.x && y === this.wormholes.entry.y)
+        ) {
           return { x, y };
         }
       }

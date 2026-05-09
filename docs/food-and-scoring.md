@@ -2,7 +2,7 @@
 
 ## Regular Food
 
-A red circle placed at a random valid grid position. Avoids snake body, wall cells, and (in constrictor mode) enclosed regions (max 200 retries, falls back to any free tile).
+A red circle placed at a random valid grid position. Avoids snake body, wall cells, wormhole entry cells, and (in constrictor mode) enclosed regions (max 200 retries, falls back to any free tile).
 
 ### Eating (Classic / Time Trial)
 
@@ -22,6 +22,10 @@ Two modes:
 
 - **Timed** (`enableTimedBonusFood`): A 15-second interval spawns bonus food if none is on the board
 - **Count-based**: Appears every 5 regular foods eaten (`foodsEaten % 5 === 0`)
+
+### Placement
+
+Avoids snake body, wall cells, and wormhole entry cells. Bonus food also won't move onto these cells during its random movement.
 
 ### Behavior
 
