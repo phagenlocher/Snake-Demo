@@ -50,6 +50,50 @@ Checkboxes in the UI control which mechanics are active. The game is destroyed a
 | Static Walls | A hollow square ring of walls with openings in the center of each side. Always solid, even with wrap around.                                 |
 | Worm Holes   | Black/white wormhole pair spawns every 30s (lasts 15s). Enter the black cell to teleport to the white cell. Won't spawn with ≤10 free tiles. |
 
+## Embedding
+
+Copy `snake.js` and `snake-game.css` into your project. Only `snake-game.css` is needed — `snake-ui.css` is specific to this demo page's toggle UI and should not be included.
+
+Add a container element, link the CSS and JS, then instantiate the game:
+
+```html
+<div class="snake-game-container"></div>
+
+<link rel="stylesheet" href="snake-game.css" />
+<script src="snake.js"></script>
+<script>
+  const container = document.querySelector('.snake-game-container');
+  const game = new SnakeGame(container, {
+    mode: 'classic',
+  });
+</script>
+```
+
+Call `game.destroy()` to clean up when removing the game from the page.
+
+### Configuration Options
+
+Pass any of these as the second argument to `new SnakeGame(container, options)`:
+
+| Option                     | Type      | Default | Description                                                    |
+| -------------------------- | --------- | ------- | -------------------------------------------------------------- |
+| `mode`                     | `string`  | `"classic"` | Game mode: `"classic"`, `"timeTrial"`, or `"constrictor"`      |
+| `enableBonusFood`          | `boolean` | `true`  | Golden diamond bonus food                                      |
+| `enableGracePeriod`        | `boolean` | `true`  | 1-second warning before collision                              |
+| `enableShrinkOnBonusFood`  | `boolean` | `true`  | Halve snake length on bonus food                               |
+| `enableSpeedUp`            | `boolean` | `true`  | Accelerate after each food eaten                               |
+| `enableScoreBonus`         | `boolean` | `true`  | Decaying bonus score multiplier                                |
+| `enableWrap`               | `boolean` | `true`  | Wrap-around boundaries                                         |
+| `enableSpeedBoost`         | `boolean` | `true`  | Same-direction keypress boosts speed                           |
+| `enableInputBuffer`        | `boolean` | `true`  | Buffer up to 2 rapid inputs                                    |
+| `enableInstantMovement`    | `boolean` | `true`  | Move immediately on keypress                                   |
+| `enableTimedBonusFood`     | `boolean` | `true`  | Spawn bonus food every 15s                                     |
+| `enableWalls`              | `boolean` | `true`  | Wall ring inside arena                                         |
+| `enableWormholes`          | `boolean` | `true`  | Wormhole teleport pairs                                        |
+| `enableColorblindMode`     | `boolean` | `false` | Bang Wong colorblind-friendly palette                          |
+
+All options default to `true` except `mode` (`"classic"`) and `enableColorblindMode` (`false`). Omitted options fall back to these defaults.
+
 ## License
 
 Public domain (CC0). See [LICENSE](LICENSE).
