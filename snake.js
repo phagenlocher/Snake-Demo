@@ -2107,7 +2107,8 @@ class SnakeGame {
       );
     }
 
-    for (const [i, seg] of this.snake.entries()) {
+    // eslint-disable-next-line unicorn/no-array-for-each -- SnakeBody#forEach, not Array#forEach
+    this.snake.forEach((seg, i) => {
       let key = this._getSegmentTileKey(i);
       if (this.state === STATE.IGNORED) {
         key += '_i';
@@ -2123,7 +2124,7 @@ class SnakeGame {
         this.CELL_SIZE,
         this.CELL_SIZE
       );
-    }
+    });
 
     this.ctx.drawImage(
       this.tiles.food,
